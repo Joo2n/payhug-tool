@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PDF변환 가이드</title>
+<style>
+  @page { size: A4; margin: 14mm 14mm 16mm; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { background: #eef0f4; }
+  body { font-family: "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; color: #24292f; font-size: 11.5pt; line-height: 1.65;
+         max-width: 880px; margin: 28px auto 56px; background: #fff; border: 1px solid #e2e5ea; border-radius: 14px;
+         padding: 30px 40px 36px; box-shadow: 0 2px 14px rgba(30, 38, 60, .05); }
+  @media (max-width: 940px) { body { margin: 0 auto 0; border-radius: 0; border-left: none; border-right: none; padding: 24px 20px 32px; } }
+  .webbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;
+            padding-bottom: 16px; border-bottom: 1px solid #e4e7ee; margin-bottom: 22px; }
+  .webbar a { text-decoration: none; font-size: 10.5pt; font-weight: 600; border-radius: 9px; padding: 8px 14px; }
+  .webbar .back { color: #57606a; }
+  .webbar .back:hover { color: #24292f; }
+  .webbar .dl { color: #fff; background: #4f63f0; border: 1px solid #4f63f0; }
+  .webbar .dl:hover { background: #3d51e0; }
+  @media print { html { background: #fff; } body { max-width: none; margin: 0; border: none; border-radius: 0; padding: 0; box-shadow: none; } .webbar { display: none; } }
+  h1 { font-size: 21pt; margin-bottom: 4px; }
+  .sub { color: #57606a; font-size: 10.5pt; margin-bottom: 18px; }
+  .intro { background: #f6f8fa; border-radius: 8px; padding: 14px 16px; margin-bottom: 22px; }
+  .intro b { color: #0969da; }
+  h2 { font-size: 13.5pt; margin: 22px 0 8px; display: flex; align-items: center; gap: 8px; }
+  .num { display: inline-flex; width: 24px; height: 24px; border-radius: 50%; background: #24292f; color: #fff;
+         font-size: 11pt; align-items: center; justify-content: center; flex: none; }
+  .step { break-inside: avoid; margin-bottom: 6px; }
+  .step p { margin-bottom: 8px; }
+  .shot { width: 100%; border: 1px solid #d0d7de; border-radius: 8px; display: block; }
+  .tip { background: #fff8e6; border-left: 3px solid #e8a915; padding: 8px 12px; margin: 10px 0 0; font-size: 10.5pt; border-radius: 0 6px 6px 0; }
+  .pagebreak { break-before: page; }
+  .faq { margin-top: 18px; }
+  .faq h2 { margin-bottom: 10px; }
+  .qa { margin-bottom: 10px; }
+  .qa b { display: block; }
+  .foot { margin-top: 24px; padding-top: 10px; border-top: 1px solid #d0d7de; color: #57606a; font-size: 9.5pt; }
+  code { background: #f6f8fa; border-radius: 4px; padding: 1px 6px; font-size: 10.5pt; font-family: "Apple SD Gothic Neo", sans-serif; }
+</style>
+</head>
+<body>
+
+<div class="webbar">
+  <a class="back" href="../pdf/">← 도구로 돌아가기</a>
+  <a class="dl" href="guide-pdf.pdf" download="PDF변환 가이드.pdf">⬇ PDF로 받기</a>
+</div>
+
+<h1>📄 PDF변환 — 사용 가이드</h1>
+<div class="sub">PDF를 이미지(PNG/JPG)로 바꾸는 도구 · 운영팀용 · 2026.07</div>
+
+<div class="intro">
+  PDF를 페이지별 이미지로 바꿔야 할 때 쓰는 도구예요. <b>설치 없이 크롬에서 바로</b> 쓰면 되고,
+  파일이 외부로 나가지 않아서 계약서·견적서 같은 문서도 안심하고 쓰셔도 됩니다.
+</div>
+
+<div class="step">
+  <h2><span class="num">1</span>도구를 열고, PDF를 끌어다 놓으세요</h2>
+  <p>여러 개를 한 번에 넣어도 됩니다. 가운데 영역에 드래그하거나, 클릭해서 파일을 골라도 돼요.</p>
+  <img class="shot" src="../assets/pdf-step1.png" alt="초기 화면">
+</div>
+
+<div class="step pagebreak">
+  <h2><span class="num">2</span>페이지 미리보기가 뜹니다 — 필요한 페이지만 체크</h2>
+  <p>넣은 PDF의 모든 페이지가 썸네일로 보여요. 기본은 전체 선택이고, 필요 없는 페이지는 체크를 빼면 됩니다.</p>
+  <img class="shot" src="../assets/pdf-step2.png" alt="페이지 미리보기">
+</div>
+
+<div class="step pagebreak">
+  <h2><span class="num">3</span>포맷·해상도를 고르세요 (그대로 둬도 됩니다)</h2>
+  <p>기본값(PNG · 2배 해상도)이면 대부분 충분해요. 용량을 줄이고 싶으면 JPG, 크게 인쇄할 거면 3~4배를 고르세요.</p>
+  <img class="shot" src="../assets/pdf-step3.png" alt="포맷과 해상도 옵션">
+</div>
+
+<div class="step pagebreak">
+  <h2><span class="num">4</span>저장 버튼을 누르면 다운로드 폴더로 들어갑니다</h2>
+  <p>여러 장이면 크롬이 "여러 파일 다운로드를 허용할까요?" 하고 한 번 물어봐요. <b>허용</b> 누르시면 끝.</p>
+  <img class="shot" src="../assets/pdf-step4.png" alt="저장 완료">
+  <div class="tip">파일 이름은 <b>원본명 p01.png</b> 형식으로 저장돼요. 1페이지짜리 PDF는 <b>원본명.png</b> 그대로.</div>
+</div>
+
+<div class="step pagebreak">
+  <h2><span class="num">5</span>이렇게 나옵니다</h2>
+  <img class="shot" src="../assets/pdf-step5.png" alt="결과 예시">
+</div>
+
+<div class="faq">
+  <h2>자주 물어볼 것 같은 것</h2>
+  <div class="qa"><b>Q. 인터넷이 필요한가요?</b>
+  네, 이 도구는 PDF를 읽을 때만 인터넷이 필요해요. 사내망이면 문제 없습니다. (파일 자체는 밖으로 안 나가요)</div>
+  <div class="qa"><b>Q. PDF가 수십 개면요?</b>
+  여러 개를 한 번에 끌어다 놓으면 됩니다. 파일 수 제한은 없어요.</div>
+  <div class="qa"><b>Q. 저장 버튼을 눌렀는데 아무 일도 없어요.</b>
+  크롬 주소창 오른쪽에 다운로드 차단 아이콘이 떠 있는지 확인하고 "허용"을 눌러주세요.</div>
+</div>
+
+<div class="foot">문의: 이서준 · 서명 배경제거 도구는 <a href="v3.html">"서명누끼 가이드"</a> 참고</div>
+
+</body>
+</html>

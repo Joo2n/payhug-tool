@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>서명누끼 가이드</title>
+<style>
+  @page { size: A4; margin: 14mm 14mm 16mm; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { background: #eef0f4; }
+  body { font-family: "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; color: #24292f; font-size: 11.5pt; line-height: 1.65;
+         max-width: 880px; margin: 28px auto 56px; background: #fff; border: 1px solid #e2e5ea; border-radius: 14px;
+         padding: 30px 40px 36px; box-shadow: 0 2px 14px rgba(30, 38, 60, .05); }
+  @media (max-width: 940px) { body { margin: 0 auto 0; border-radius: 0; border-left: none; border-right: none; padding: 24px 20px 32px; } }
+  .webbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;
+            padding-bottom: 16px; border-bottom: 1px solid #e4e7ee; margin-bottom: 22px; }
+  .webbar a { text-decoration: none; font-size: 10.5pt; font-weight: 600; border-radius: 9px; padding: 8px 14px; }
+  .webbar .back { color: #57606a; }
+  .webbar .back:hover { color: #24292f; }
+  .webbar .dl { color: #fff; background: #4f63f0; border: 1px solid #4f63f0; }
+  .webbar .dl:hover { background: #3d51e0; }
+  @media print { html { background: #fff; } body { max-width: none; margin: 0; border: none; border-radius: 0; padding: 0; box-shadow: none; } .webbar { display: none; } }
+  h1 { font-size: 21pt; margin-bottom: 4px; }
+  .sub { color: #57606a; font-size: 10.5pt; margin-bottom: 18px; }
+  .intro { background: #f6f8fa; border-radius: 8px; padding: 14px 16px; margin-bottom: 22px; }
+  .intro b { color: #0969da; }
+  h2 { font-size: 13.5pt; margin: 22px 0 8px; display: flex; align-items: center; gap: 8px; }
+  .num { display: inline-flex; width: 24px; height: 24px; border-radius: 50%; background: #24292f; color: #fff;
+         font-size: 11pt; align-items: center; justify-content: center; flex: none; }
+  .step { break-inside: avoid; margin-bottom: 6px; }
+  .step p { margin-bottom: 8px; }
+  .shot { width: 100%; border: 1px solid #d0d7de; border-radius: 8px; display: block; }
+  .tip { background: #fff8e6; border-left: 3px solid #e8a915; padding: 8px 12px; margin: 10px 0 0; font-size: 10.5pt; border-radius: 0 6px 6px 0; }
+  .pagebreak { break-before: page; }
+  .faq { margin-top: 18px; }
+  .faq h2 { margin-bottom: 10px; }
+  .qa { margin-bottom: 10px; }
+  .qa b { display: block; }
+  .foot { margin-top: 24px; padding-top: 10px; border-top: 1px solid #d0d7de; color: #57606a; font-size: 9.5pt; }
+  code { background: #f6f8fa; border-radius: 4px; padding: 1px 6px; font-size: 10.5pt; font-family: "Apple SD Gothic Neo", sans-serif; }
+</style>
+</head>
+<body>
+
+<div class="webbar">
+  <a class="back" href="../v3/">← 도구로 돌아가기</a>
+  <a class="dl" href="guide-v3.pdf" download="서명누끼 가이드.pdf">⬇ PDF로 받기</a>
+</div>
+
+<h1>🖊 서명누끼 v3 — 사용 가이드</h1>
+<div class="sub">서명·도장 사진/PDF의 배경을 지워 투명 PNG로 만드는 도구 · 운영팀용 · 2026.07</div>
+
+<div class="intro">
+  계약서에 넣을 서명·도장 이미지가 필요할 때 쓰는 도구예요. 사진이든 <b>PDF든 그냥 넣으면
+  배경이 자동으로 지워집니다.</b> 슬라이더는 <b>기본값(둘 다 100)이 가장 잘 나오게</b> 맞춰져
+  있어서 보통 만질 필요 없어요 — 넣고, (필요하면) 원하는 부분만 드래그하고, 저장하면 끝.
+  파일은 외부로 나가지 않아요.
+</div>
+
+<div class="step">
+  <h2><span class="num">1</span>파일을 끌어다 놓으세요 — PDF도 바로 됩니다</h2>
+  <p>서명·도장이 찍힌 사진, 스캔, <b>계약서 PDF</b> 전부 그대로 넣으면 돼요. 여러 개 한 번에 가능하고, 복사한 이미지는 Cmd+V로 붙여넣어도 됩니다. PDF를 이미지로 미리 바꿀 필요 없어요.</p>
+  <img class="shot" src="../assets/v3-step1.png" alt="초기 화면">
+</div>
+
+<div class="step pagebreak">
+  <h2><span class="num">2</span>넣자마자 배경이 지워진 결과가 보입니다</h2>
+  <p>체크무늬가 "투명해진 부분"이에요. PDF는 페이지 버튼(◀ ▶)으로 넘기면 그 페이지가 바로 처리되고, 페이지 번호 옆 <b>체크박스로 저장할 페이지</b>를 고를 수 있어요 (기본은 지금 보는 페이지 1장). 슬라이더는 기본 100/100 그대로 두면 됩니다 — 글씨가 너무 옅게 붙으면 <b>강도</b>를 조금 내려보세요.</p>
+  <img class="shot" src="../assets/v3-step2.png" alt="처리 결과와 슬라이더">
+</div>
+
+<div class="step pagebreak">
+  <h2><span class="num">3</span>도장·서명 부분만 확대해서 드래그하세요</h2>
+  <p>Ctrl+휠(트랙패드 핀치)로 <b>부드럽게</b> 확대되고, [+][−] 버튼은 25%씩 정확히 움직여요. 확대한 뒤 마우스로 원하는 부분을 드래그하면 <b>그 영역만</b> 잘라서 저장됩니다. 계약서에서 도장만 뽑을 때 이렇게 쓰세요. 드래그를 안 하면 전체가 저장돼요.</p>
+  <img class="shot" src="../assets/v3-step3.png" alt="확대 후 영역 선택">
+</div>
+
+<div class="step pagebreak">
+  <h2><span class="num">4</span>저장 버튼을 누르면 다운로드 폴더로 들어갑니다</h2>
+  <p>[전체 저장]은 <b>체크한 페이지들 + 넣은 이미지 전부</b>를 저장해요. 여러 장이면 크롬이 "여러 파일 다운로드를 허용할까요?" 하고 한 번 물어봐요. <b>허용</b> 누르시면 끝.</p>
+  <img class="shot" src="../assets/v3-step4.png" alt="저장 완료">
+  <div class="tip">파일 이름은 <b>원본명(누끼).png</b>로 저장돼요. 예: 계약서.pdf 3페이지 → 계약서 p3(누끼).png</div>
+</div>
+
+<div class="step pagebreak">
+  <h2><span class="num">5</span>이렇게 나옵니다</h2>
+  <p>배경·그림자는 사라지고 도장의 빨간색, 펜의 파란색은 그대로 유지됩니다. 어디에 얹어도 깔끔해요.</p>
+  <img class="shot" src="../assets/v3-step5.png" alt="결과 비교">
+</div>
+
+<div class="faq">
+  <h2>자주 물어볼 것 같은 것</h2>
+  <div class="qa"><b>Q. 인터넷이 필요한가요?</b>
+  이미지는 인터넷 없이도 됩니다. PDF를 넣을 때만 인터넷이 필요해요. (파일 자체는 밖으로 안 나가요)</div>
+  <div class="qa"><b>Q. 결과가 흐리거나 잡티가 있으면요?</b>
+  기본값(100/100)이 대부분 제일 잘 나와요. 배경 얼룩이 남으면 <b>강도</b>를 조금 내리고, 가장자리가 딱딱해 보이면 <b>부드러움</b>을 올려보세요. 그래도 이상하면 그 파일을 이서준에게 보내주세요.</div>
+  <div class="qa"><b>Q. 사진이 수십 장이면요?</b>
+  한꺼번에 끌어다 놓고 [전체 저장] 한 번이면 됩니다. 파일 수 제한은 없어요.</div>
+  <div class="qa"><b>Q. 어두운 배경이나 손이 같이 찍힌 사진도 되나요?</b>
+  이 도구는 "밝은 종이 + 어두운 잉크" 전용이에요. 배경이 복잡한 사진은 잘 안 될 수 있으니, 가급적 종이만 나오게 찍어주세요.</div>
+</div>
+
+<div class="foot">문의: 이서준 · PDF 전체를 이미지로 바꿀 땐 <a href="pdf.html">"PDF변환 가이드"</a> 참고</div>
+
+</body>
+</html>

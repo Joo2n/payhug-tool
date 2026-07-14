@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PDF 변환 — PDF를 PNG/JPG 이미지로</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard",
+                 "Malgun Gothic", "Segoe UI", sans-serif;
+    background: #f4f5f7;
+    color: #23262b;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  .app { max-width: 980px; margin: 0 auto; padding: 28px 20px 60px; }
+  header { text-align: center; margin-bottom: 22px; }
+  header h1 { font-size: 26px; font-weight: 700; letter-spacing: -0.5px; }
+  header h1 .icon { font-size: 22px; margin-right: 6px; }
+  header p.hint { color: #6b7280; font-size: 14px; margin-top: 6px; }
+
+  /* ---- 드롭존 ---- */
+  .dropzone {
+    border: 2px dashed #c3c9d4;
+    border-radius: 16px;
+    background: #fff;
+    padding: 64px 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color .15s, background .15s;
+  }
+  .dropzone:hover { border-color: #7c8cf8; }
+  .dropzone.dragover { border-color: #4f63f0; background: #eef1ff; }
+  .dropzone .big { font-size: 44px; margin-bottom: 12px; }
+  .dropzone .main-text { font-size: 17px; font-weight: 600; margin-bottom: 6px; }
+  .dropzone .sub-text { font-size: 13px; color: #8a919e; }
+
+  /* ---- 작업 화면 ---- */
+  #workspace { margin-top: 4px; }
+  .toolbar {
+    background: #fff;
+    border: 1px solid #e4e7ee;
+    border-radius: 14px;
+    padding: 14px 18px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px 22px;
+    align-items: center;
+    margin-bottom: 14px;
+  }
+  .ctrl { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+  .ctrl label { font-weight: 600; color: #444a54; white-space: nowrap; }
+  .ctrl input[type=range] { width: 120px; accent-color: #4f63f0; }
+  .ctrl .val { width: 30px; text-align: right; color: #6b7280; font-variant-numeric: tabular-nums; }
+  .ctrl select {
+    font: inherit; font-size: 13px;
+    border: 1px solid #d4d9e3; border-radius: 8px;
+    padding: 6px 8px; background: #fff; color: #33383f;
+  }
+
+  button {
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    border: 1px solid #d4d9e3;
+    background: #fff;
+    color: #33383f;
+    border-radius: 9px;
+    padding: 8px 14px;
+    cursor: pointer;
+    transition: background .12s, border-color .12s;
+  }
+  button:hover:not(:disabled) { background: #f0f2f7; }
+  button:disabled { opacity: .45; cursor: default; }
+  button.primary {
+    background: #4f63f0; border-color: #4f63f0; color: #fff;
+    padding: 9px 20px; font-size: 14px;
+  }
+  button.primary:hover:not(:disabled) { background: #3d51e0; }
+  .spacer { flex: 1; }
+
+  /* ---- 포맷 토글 (세그먼트) ---- */
+  .seg { display: inline-flex; border: 1px solid #d4d9e3; border-radius: 9px; overflow: hidden; }
+  .seg button { border: 0; border-radius: 0; padding: 7px 16px; }
+  .seg button + button { border-left: 1px solid #d4d9e3; }
+  .seg button.active { background: #4f63f0; color: #fff; }
+  .seg button.active:hover { background: #4f63f0; }
+
+  /* ---- 진행률 ---- */
+  #progressWrap {
+    background: #e4e7ee;
+    border-radius: 999px;
+    height: 8px;
+    overflow: hidden;
+    margin-bottom: 14px;
+  }
+  #progressBar {
+    height: 100%;
+    width: 0%;
+    background: #4f63f0;
+    border-radius: 999px;
+    transition: width .15s;
+  }
+
+  /* ---- 파일 카드 ---- */
+  .file-card {
+    background: #fff;
+    border: 1px solid #e4e7ee;
+    border-radius: 14px;
+    padding: 14px 16px 16px;
+    margin-bottom: 14px;
+  }
+  .file-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 12px;
+    margin-bottom: 12px;
+  }
+  .file-head .fname {
+    font-size: 14px; font-weight: 700; color: #23262b;
+    overflow-wrap: anywhere;
+  }
+  .file-head .fmeta { font-size: 12px; color: #8a919e; white-space: nowrap; }
+  .file-head button { font-size: 12px; padding: 5px 10px; }
+  .file-head .remove-btn { color: #c0392b; }
+
+  .thumb-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+    gap: 12px;
+  }
+  .thumb {
+    position: relative;
+    border: 2px solid #e4e7ee;
+    border-radius: 10px;
+    padding: 8px 8px 6px;
+    background: #fafbfc;
+    cursor: pointer;
+    text-align: center;
+    transition: border-color .12s, opacity .12s, background .12s;
+    user-select: none;
+  }
+  .thumb.sel { border-color: #4f63f0; background: #f4f6ff; }
+  .thumb:not(.sel) { opacity: .55; }
+  .thumb:hover { opacity: 1; }
+  .thumb canvas {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 0 auto;
+    box-shadow: 0 0 0 1px #e4e7ee;
+    background: #fff;
+    border-radius: 3px;
+  }
+  .thumb .ph {
+    height: 120px;
+    display: flex; align-items: center; justify-content: center;
+    color: #b8bec9; font-size: 12px;
+  }
+  .thumb .pnum { font-size: 11px; color: #6b7280; margin-top: 6px; font-variant-numeric: tabular-nums; }
+  .thumb input[type=checkbox] {
+    position: absolute;
+    top: 6px; left: 6px;
+    width: 17px; height: 17px;
+    accent-color: #4f63f0;
+    pointer-events: none;
+  }
+
+  #status {
+    margin-top: 12px;
+    font-size: 13px;
+    color: #4b5563;
+    text-align: center;
+    min-height: 20px;
+  }
+  #status.error { color: #d33; font-weight: 600; }
+
+  footer { text-align: center; margin-top: 26px; font-size: 12px; color: #a2a8b3; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <a href="../guide/pdf.html" target="_blank" rel="noopener" style="float:right;font-size:13px;font-weight:600;color:#4f63f0;text-decoration:none;border:1px solid #d4d9e3;background:#fff;border-radius:9px;padding:8px 14px;margin-left:12px">📖 사용법</a>
+    <h1><span class="icon">📄</span>PDF 변환</h1>
+    <p class="hint">PDF를 PNG/JPG 이미지로 바꿔 드려요 — 여러 파일, 여러 페이지도 한 번에</p>
+  </header>
+
+  <!-- 파일 입력 -->
+  <input type="file" id="fileInput" accept="application/pdf,.pdf" multiple hidden>
+
+  <div id="drop" class="dropzone">
+    <div class="big">🖼️</div>
+    <div class="main-text">여기에 PDF를 끌어다 놓거나, 클릭해서 선택하세요</div>
+    <div class="sub-text">PDF 여러 개를 한꺼번에 넣어도 돼요 · 페이지를 골라서 PNG/JPG로 저장할 수 있어요</div>
+  </div>
+
+  <div id="workspace" hidden>
+    <div class="toolbar">
+      <div class="ctrl">
+        <label>파일 형식</label>
+        <span class="seg">
+          <button type="button" id="fmtPngBtn" class="active">PNG</button>
+          <button type="button" id="fmtJpgBtn">JPG</button>
+        </span>
+      </div>
+      <div class="ctrl" id="qualityCtrl" hidden>
+        <label for="quality">JPG 품질</label>
+        <input type="range" id="quality" min="50" max="100" value="90">
+        <span class="val" id="qualityVal">90</span>
+      </div>
+      <div class="ctrl">
+        <label for="scaleSel">해상도</label>
+        <select id="scaleSel">
+          <option value="1">1배 (72dpi)</option>
+          <option value="2" selected>2배 (144dpi) — 권장</option>
+          <option value="3">3배 (216dpi)</option>
+          <option value="4">4배 (288dpi)</option>
+        </select>
+      </div>
+      <div class="spacer"></div>
+      <button id="addBtn" type="button">＋ PDF 추가</button>
+      <button id="saveBtn" type="button" class="primary">⬇ 선택 페이지 저장</button>
+    </div>
+
+    <div id="progressWrap" hidden><div id="progressBar"></div></div>
+
+    <div id="fileList"></div>
+
+    <p id="status"></p>
+  </div>
+
+  <footer>PDF 처리는 인터넷 연결이 필요합니다 · 파일은 컴퓨터 밖으로 전송되지 않아요</footer>
+</div>
+
+<script>
+'use strict';
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+
+  var fileInput = $('fileInput'), dropZone = $('drop'), workspace = $('workspace'),
+      fileListEl = $('fileList'), statusEl = $('status'),
+      fmtPngBtn = $('fmtPngBtn'), fmtJpgBtn = $('fmtJpgBtn'),
+      qualityCtrl = $('qualityCtrl'), qualityEl = $('quality'), qualityVal = $('qualityVal'),
+      scaleSel = $('scaleSel'),
+      addBtn = $('addBtn'), saveBtn = $('saveBtn'),
+      progressWrap = $('progressWrap'), progressBar = $('progressBar');
+
+  var THUMB_W = 280;      // 썸네일 렌더 폭(px) — 화면 표시는 CSS로 축소
+  var MAX_SIDE = 10000;   // 출력 캔버스 최대 변 길이(px)
+
+  var files = [];         // {id, name, base, doc, numPages, selected[], cardEl, thumbEls[]}
+  var nextId = 1;
+  var fmt = 'png';        // 'png' | 'jpg'
+  var busy = false;       // 저장(변환) 진행 중
+  var loading = false;    // 썸네일 준비 중
+
+  /* ---------------- 상태 표시 ---------------- */
+  function setStatus(msg, isError) {
+    statusEl.textContent = msg || '';
+    statusEl.className = isError ? 'error' : '';
+  }
+
+  function setProgress(done, total) {
+    if (total > 0) {
+      progressWrap.hidden = false;
+      progressBar.style.width = Math.round(done / total * 100) + '%';
+    } else {
+      progressWrap.hidden = true;
+      progressBar.style.width = '0%';
+    }
+  }
+
+  function selectedCount() {
+    var n = 0;
+    files.forEach(function (f) {
+      f.selected.forEach(function (s) { if (s) n++; });
+    });
+    return n;
+  }
+
+  function updateSaveBtn() {
+    var n = selectedCount();
+    saveBtn.textContent = '⬇ 선택 페이지 저장' + (n > 0 ? ' (' + n + '장)' : '');
+    saveBtn.disabled = busy || loading || n === 0;
+    addBtn.disabled = busy;
+  }
+
+  /* ---------------- pdf.js (CDN lazy load) ---------------- */
+  var PDFJS_VER = '3.11.174';
+  var PDFJS_BASE = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/' + PDFJS_VER + '/';
+  var pdfjsPromise = null;
+
+  function loadPdfJs() {
+    if (window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
+    if (pdfjsPromise) return pdfjsPromise;
+    pdfjsPromise = new Promise(function (resolve, reject) {
+      var s = document.createElement('script');
+      s.src = PDFJS_BASE + 'pdf.min.js';
+      s.onload = function () {
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_BASE + 'pdf.worker.min.js';
+        resolve(window.pdfjsLib);
+      };
+      s.onerror = function () {
+        pdfjsPromise = null;
+        reject(new Error('offline'));
+      };
+      document.head.appendChild(s);
+    });
+    return pdfjsPromise;
+  }
+
+  /* ---------------- 파일 추가 ---------------- */
+  function isPdf(f) {
+    return f.type === 'application/pdf' || (f.name || '').toLowerCase().slice(-4) === '.pdf';
+  }
+
+  function handleFiles(list) {
+    if (busy) { setStatus('저장이 끝난 뒤에 파일을 추가해 주세요.'); return; }
+    var pdfs = [], skipped = 0, i;
+    for (i = 0; i < list.length; i++) {
+      if (isPdf(list[i])) pdfs.push(list[i]);
+      else skipped++;
+    }
+    if (!pdfs.length) {
+      setStatus('PDF 파일만 열 수 있어요.' + (skipped ? ' (' + skipped + '개 파일은 PDF가 아니라서 건너뛰었어요)' : ''), true);
+      return;
+    }
+    loading = true;
+    updateSaveBtn();
+    setStatus('PDF 도구를 불러오는 중…');
+    loadPdfJs().then(function (pdfjsLib) {
+      var chain = Promise.resolve();
+      pdfs.forEach(function (f) {
+        chain = chain.then(function () { return openOne(pdfjsLib, f); });
+      });
+      return chain;
+    }).then(function () {
+      loading = false;
+      updateSaveBtn();
+      var msg = '준비 완료! 저장할 페이지를 고르고 [선택 페이지 저장]을 누르세요.';
+      if (skipped) msg += ' (PDF가 아닌 파일 ' + skipped + '개는 건너뛰었어요)';
+      setStatus(msg);
+    }).catch(function (err) {
+      loading = false;
+      updateSaveBtn();
+      if (err && err.message === 'offline') {
+        setStatus('PDF 처리는 인터넷 연결이 필요합니다. 인터넷에 연결한 뒤 다시 시도해 주세요.', true);
+      } else {
+        setStatus('PDF를 여는 중 오류가 났어요: ' + (err && err.message ? err.message : err), true);
+      }
+    });
+  }
+
+  function openOne(pdfjsLib, f) {
+    setStatus("'" + f.name + "' 여는 중…");
+    return f.arrayBuffer().then(function (buf) {
+      return pdfjsLib.getDocument({ data: buf }).promise;
+    }).then(function (doc) {
+      var base = f.name.replace(/\.pdf$/i, '');
+      var entry = {
+        id: nextId++,
+        name: f.name,
+        base: base,
+        doc: doc,
+        numPages: doc.numPages,
+        selected: [],
+        cardEl: null,
+        thumbEls: []
+      };
+      for (var i = 0; i < doc.numPages; i++) entry.selected.push(true);
+      files.push(entry);
+      buildCard(entry);
+      dropZone.hidden = true;
+      workspace.hidden = false;
+      updateSaveBtn();
+      return renderThumbs(entry);
+    }).catch(function (err) {
+      if (err && err.message === 'offline') throw err;
+      setStatus("'" + f.name + "' 파일을 읽지 못했어요: " + (err && err.message ? err.message : err), true);
+    });
+  }
+
+  /* ---------------- 파일 카드 UI ---------------- */
+  function buildCard(entry) {
+    var card = document.createElement('div');
+    card.className = 'file-card';
+
+    var head = document.createElement('div');
+    head.className = 'file-head';
+
+    var fname = document.createElement('span');
+    fname.className = 'fname';
+    fname.textContent = '📄 ' + entry.name;
+
+    var fmeta = document.createElement('span');
+    fmeta.className = 'fmeta';
+    fmeta.textContent = entry.numPages + '페이지';
+
+    var spacer = document.createElement('span');
+    spacer.className = 'spacer';
+
+    var allBtn = document.createElement('button');
+    allBtn.type = 'button';
+    allBtn.textContent = '전체 선택';
+    allBtn.addEventListener('click', function () { setAll(entry, true); });
+
+    var noneBtn = document.createElement('button');
+    noneBtn.type = 'button';
+    noneBtn.textContent = '전체 해제';
+    noneBtn.addEventListener('click', function () { setAll(entry, false); });
+
+    var removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.className = 'remove-btn';
+    removeBtn.textContent = '✕ 제거';
+    removeBtn.addEventListener('click', function () { removeFile(entry); });
+
+    head.appendChild(fname);
+    head.appendChild(fmeta);
+    head.appendChild(spacer);
+    head.appendChild(allBtn);
+    head.appendChild(noneBtn);
+    head.appendChild(removeBtn);
+
+    var grid = document.createElement('div');
+    grid.className = 'thumb-grid';
+
+    for (var i = 0; i < entry.numPages; i++) {
+      (function (idx) {
+        var cell = document.createElement('div');
+        cell.className = 'thumb sel';
+
+        var cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.checked = true;
+        cb.tabIndex = -1;
+
+        var ph = document.createElement('div');
+        ph.className = 'ph';
+        ph.textContent = '준비 중…';
+
+        var pnum = document.createElement('div');
+        pnum.className = 'pnum';
+        pnum.textContent = (idx + 1) + ' / ' + entry.numPages + ' 페이지';
+
+        cell.appendChild(cb);
+        cell.appendChild(ph);
+        cell.appendChild(pnum);
+        cell.addEventListener('click', function () {
+          if (busy) return;
+          entry.selected[idx] = !entry.selected[idx];
+          syncThumb(entry, idx);
+          updateSaveBtn();
+        });
+
+        grid.appendChild(cell);
+        entry.thumbEls.push({ cell: cell, cb: cb, ph: ph });
+      })(i);
+    }
+
+    card.appendChild(head);
+    card.appendChild(grid);
+    entry.cardEl = card;
+    fileListEl.appendChild(card);
+  }
+
+  function syncThumb(entry, idx) {
+    var t = entry.thumbEls[idx];
+    t.cb.checked = entry.selected[idx];
+    t.cell.className = 'thumb' + (entry.selected[idx] ? ' sel' : '');
+  }
+
+  function setAll(entry, val) {
+    if (busy) return;
+    for (var i = 0; i < entry.numPages; i++) {
+      entry.selected[i] = val;
+      syncThumb(entry, i);
+    }
+    updateSaveBtn();
+  }
+
+  function removeFile(entry) {
+    if (busy) return;
+    var i = files.indexOf(entry);
+    if (i >= 0) files.splice(i, 1);
+    if (entry.cardEl && entry.cardEl.parentNode) entry.cardEl.parentNode.removeChild(entry.cardEl);
+    try { entry.doc.destroy(); } catch (e) {}
+    if (!files.length) {
+      workspace.hidden = true;
+      dropZone.hidden = false;
+      setStatus('');
+    } else {
+      setStatus("'" + entry.name + "' 파일을 목록에서 뺐어요.");
+    }
+    updateSaveBtn();
+  }
+
+  /* ---------------- 썸네일 렌더 ---------------- */
+  function renderThumbs(entry) {
+    var chain = Promise.resolve();
+    for (var i = 1; i <= entry.numPages; i++) {
+      (function (pageNo) {
+        chain = chain.then(function () {
+          if (files.indexOf(entry) < 0) return; // 도중에 제거됨
+          setStatus("'" + entry.name + "' 미리보기 그리는 중… (" + pageNo + '/' + entry.numPages + ' 페이지)');
+          return entry.doc.getPage(pageNo).then(function (page) {
+            var vp1 = page.getViewport({ scale: 1 });
+            var scale = THUMB_W / vp1.width;
+            var vp = page.getViewport({ scale: scale });
+            var c = document.createElement('canvas');
+            c.width = Math.max(1, Math.round(vp.width));
+            c.height = Math.max(1, Math.round(vp.height));
+            var ctx = c.getContext('2d');
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, c.width, c.height);
+            return page.render({ canvasContext: ctx, viewport: vp }).promise.then(function () {
+              if (files.indexOf(entry) < 0) return;
+              var t = entry.thumbEls[pageNo - 1];
+              t.cell.replaceChild(c, t.ph);
+            });
+          });
+        });
+      })(i);
+    }
+    return chain;
+  }
+
+  /* ---------------- 페이지 → 이미지 렌더 ---------------- */
+  function renderPageToBlob(doc, pageNo, mult, format, quality) {
+    return doc.getPage(pageNo).then(function (page) {
+      var vp = page.getViewport({ scale: mult });
+      if (Math.max(vp.width, vp.height) > MAX_SIDE) {
+        vp = page.getViewport({ scale: mult * MAX_SIDE / Math.max(vp.width, vp.height) });
+      }
+      var c = document.createElement('canvas');
+      c.width = Math.max(1, Math.round(vp.width));
+      c.height = Math.max(1, Math.round(vp.height));
+      var ctx = c.getContext('2d');
+      if (format === 'jpg') {           // JPG는 투명이 없어서 흰 배경을 깔아줘요
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, c.width, c.height);
+      }
+      return page.render({ canvasContext: ctx, viewport: vp }).promise.then(function () {
+        return new Promise(function (resolve, reject) {
+          var mime = format === 'jpg' ? 'image/jpeg' : 'image/png';
+          var q = format === 'jpg' ? quality / 100 : undefined;
+          c.toBlob(function (blob) {
+            if (blob) resolve(blob);
+            else reject(new Error('이미지 생성에 실패했어요'));
+          }, mime, q);
+        });
+      });
+    });
+  }
+
+  /* ---------------- 파일명 ---------------- */
+  function pageFileName(entry, pageNo, ext) {
+    if (entry.numPages === 1) return entry.base + '.' + ext;
+    var pad = String(entry.numPages).length;
+    if (pad < 2) pad = 2;
+    var num = String(pageNo);
+    while (num.length < pad) num = '0' + num;
+    return entry.base + ' p' + num + '.' + ext;
+  }
+
+  function uniqueName(used, name) {
+    if (!used[name]) { used[name] = 1; return name; }
+    var dot = name.lastIndexOf('.');
+    var base = name.slice(0, dot), ext = name.slice(dot);
+    var k = 2;
+    while (used[base + ' (' + k + ')' + ext]) k++;
+    var nn = base + ' (' + k + ')' + ext;
+    used[nn] = 1;
+    return nn;
+  }
+
+  /* ---------------- 저장 ---------------- */
+  function saveBlob(blob, filename) {
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 5000);
+  }
+
+  function delay(ms) {
+    return new Promise(function (resolve) { setTimeout(resolve, ms); });
+  }
+
+  /* 선택 페이지를 순서대로 렌더 → onEach(name, blob) 호출 (순차) */
+  function renderTasks(tasks, opt, onEach) {
+    var used = {};
+    var chain = Promise.resolve();
+    tasks.forEach(function (task, idx) {
+      chain = chain.then(function () {
+        setStatus((idx + 1) + ' / ' + tasks.length + ' 페이지 렌더링 중… (' + opt.mult + '배 해상도)');
+        return renderPageToBlob(task.entry.doc, task.pageNo, opt.mult, opt.format, opt.quality)
+          .then(function (blob) {
+            var name = uniqueName(used, pageFileName(task.entry, task.pageNo, opt.ext));
+            return onEach(name, blob);
+          }).then(function () {
+            setProgress(idx + 1, tasks.length);
+          });
+      });
+    });
+    return chain;
+  }
+
+  /* 순차 다운로드 → 브라우저 다운로드 폴더 (1장이면 바로 저장) */
+  function saveByDownloads(tasks, opt) {
+    var items = [];
+    return renderTasks(tasks, opt, function (name, blob) {
+      items.push({ name: name, blob: blob });
+    }).then(function () {
+      if (items.length === 1) {
+        saveBlob(items[0].blob, items[0].name);
+        return "저장 완료! '" + items[0].name + "' — 다운로드 폴더를 확인하세요";
+      }
+      setStatus('파일을 하나씩 내려받는 중… 브라우저가 [여러 파일 다운로드 허용]을 물으면 허용해 주세요');
+      setProgress(0, items.length);
+      var chain = Promise.resolve();
+      items.forEach(function (it, idx) {
+        chain = chain.then(function () {
+          saveBlob(it.blob, it.name);
+          setProgress(idx + 1, items.length);
+          return idx < items.length - 1 ? delay(300) : null;
+        });
+      });
+      return chain.then(function () {
+        return '저장 완료! ' + items.length + '개 파일 다운로드를 시작했어요 — 다운로드 폴더를 확인하세요';
+      });
+    });
+  }
+
+  function collectTasks() {
+    var tasks = [];
+    files.forEach(function (f) {
+      f.selected.forEach(function (s, i) {
+        if (s) tasks.push({ entry: f, pageNo: i + 1 });
+      });
+    });
+    return tasks;
+  }
+
+  function currentOpt() {
+    return {
+      format: fmt,
+      ext: fmt === 'jpg' ? 'jpg' : 'png',
+      quality: +qualityEl.value,
+      mult: +scaleSel.value
+    };
+  }
+
+  function finishSave(msg, isErr) {
+    busy = false;
+    setProgress(0, 0);
+    updateSaveBtn();
+    setStatus(msg, isErr);
+  }
+
+  /* 저장 버튼: 1장이면 바로, 여러 장이면 순차 다운로드 */
+  saveBtn.addEventListener('click', function () {
+    if (busy || loading) return;
+    var tasks = collectTasks();
+    if (!tasks.length) return;
+
+    busy = true;
+    updateSaveBtn();
+    setProgress(0, tasks.length);
+
+    saveByDownloads(tasks, currentOpt()).then(function (msg) {
+      finishSave(msg);
+    }).catch(function (err) {
+      finishSave('저장 중 오류가 났어요: ' + (err && err.message ? err.message : err), true);
+    });
+  });
+
+  /* ---------------- 옵션 컨트롤 ---------------- */
+  function setFmt(next) {
+    fmt = next;
+    fmtPngBtn.className = fmt === 'png' ? 'active' : '';
+    fmtJpgBtn.className = fmt === 'jpg' ? 'active' : '';
+    qualityCtrl.hidden = fmt !== 'jpg';
+  }
+  fmtPngBtn.addEventListener('click', function () { setFmt('png'); });
+  fmtJpgBtn.addEventListener('click', function () { setFmt('jpg'); });
+
+  qualityEl.addEventListener('input', function () {
+    qualityVal.textContent = qualityEl.value;
+  });
+
+  /* ---------------- 입력: 클릭 / 드래그&드롭 ---------------- */
+  dropZone.addEventListener('click', function () { fileInput.click(); });
+  addBtn.addEventListener('click', function () { fileInput.click(); });
+
+  fileInput.addEventListener('change', function () {
+    if (fileInput.files && fileInput.files.length) handleFiles(fileInput.files);
+    fileInput.value = ''; // 같은 파일 재선택 허용
+  });
+
+  ['dragenter', 'dragover'].forEach(function (ev) {
+    document.addEventListener(ev, function (e) {
+      e.preventDefault();
+      dropZone.classList.add('dragover');
+    });
+  });
+  ['dragleave', 'drop'].forEach(function (ev) {
+    document.addEventListener(ev, function (e) {
+      e.preventDefault();
+      dropZone.classList.remove('dragover');
+    });
+  });
+  document.addEventListener('drop', function (e) {
+    var fl = e.dataTransfer && e.dataTransfer.files;
+    if (fl && fl.length) handleFiles(fl);
+  });
+})();
+</script>
+</body>
+</html>

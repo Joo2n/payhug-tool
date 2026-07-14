@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>페이허그 문서 도구</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    background: #f3f4f8;
+    color: #33383f;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 56px 20px 40px;
+  }
+  header { text-align: center; margin-bottom: 36px; }
+  h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; }
+  header p { color: #6b7280; font-size: 14px; margin-top: 8px; }
+  .cards { display: flex; flex-direction: column; gap: 16px; width: 100%; max-width: 560px; }
+  .card {
+    position: relative;
+    background: #fff;
+    border: 1px solid #e4e7ee;
+    border-radius: 16px;
+    padding: 22px 24px;
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    transition: border-color .15s, box-shadow .15s, transform .15s;
+  }
+  .card:hover {
+    border-color: #7c8cf8;
+    box-shadow: 0 4px 16px rgba(79, 99, 240, .10);
+    transform: translateY(-1px);
+  }
+  .card .icon { font-size: 34px; flex: none; }
+  .card .body { flex: 1; min-width: 0; }
+  .card .name { display: block; font-size: 17px; font-weight: 700; margin-bottom: 4px; }
+  .card .desc { display: block; font-size: 13px; color: #6b7280; line-height: 1.5; }
+  /* 카드 전체를 덮는 메인 링크 */
+  .card a.main { position: static; text-decoration: none; color: inherit; }
+  .card a.main::after { content: ""; position: absolute; inset: 0; border-radius: 16px; }
+  .card a.guide {
+    position: relative;
+    z-index: 1;
+    flex: none;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: #4f63f0;
+    text-decoration: none;
+    border: 1px solid #d4d9e3;
+    background: #fff;
+    border-radius: 9px;
+    padding: 7px 12px;
+    white-space: nowrap;
+    transition: background .12s, border-color .12s;
+  }
+  .card a.guide:hover { background: #eef1ff; border-color: #7c8cf8; }
+  footer {
+    margin-top: 40px;
+    font-size: 12.5px;
+    color: #8a919e;
+    text-align: center;
+    line-height: 1.7;
+  }
+  footer .lock { font-size: 13px; }
+</style>
+</head>
+<body>
+  <header>
+    <h1>🧰 페이허그 문서 도구</h1>
+    <p>계약서·견적서 작업에 쓰는 사내 도구 모음이에요 — 설치 없이 브라우저에서 바로 쓰세요</p>
+  </header>
+
+  <div class="cards">
+    <div class="card">
+      <span class="icon">✍</span>
+      <a class="main body" href="v3/">
+        <span class="name">서명 누끼 (여러 파일 · PDF)</span>
+        <span class="desc">사진·PDF를 한꺼번에 넣으면 배경을 지워 투명 PNG로 — 계약서에서 도장·서명만 뽑을 때</span>
+      </a>
+      <a class="guide" href="guide/v3.html">📖 사용법</a>
+    </div>
+
+    <div class="card">
+      <span class="icon">🖊</span>
+      <a class="main body" href="v2/">
+        <span class="name">서명 누끼 (한 장씩 · 슬라이더)</span>
+        <span class="desc">사진 한 장을 슬라이더로 다듬으면서 꼼꼼하게 — 결과를 직접 조절하고 싶을 때</span>
+      </a>
+      <a class="guide" href="guide/v2.html">📖 사용법</a>
+    </div>
+
+    <div class="card">
+      <span class="icon">📄</span>
+      <a class="main body" href="pdf/">
+        <span class="name">PDF 변환</span>
+        <span class="desc">PDF를 페이지별 PNG/JPG 이미지로 — 여러 파일, 여러 페이지도 한 번에</span>
+      </a>
+      <a class="guide" href="guide/pdf.html">📖 사용법</a>
+    </div>
+  </div>
+
+  <footer>
+    <span class="lock">🔒</span> 모든 처리는 브라우저 안에서만 — 파일이 서버로 전송되지 않아요
+  </footer>
+</body>
+</html>
