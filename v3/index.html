@@ -1,0 +1,1736 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>서명 누끼 v3.1 — 서명 배경 제거</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard",
+                 "Malgun Gothic", "Segoe UI", sans-serif;
+    background: #f4f5f7;
+    color: #23262b;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  .app { max-width: 980px; margin: 0 auto; padding: 28px 20px 60px; }
+  header { text-align: center; margin-bottom: 22px; }
+  header h1 { font-size: 26px; font-weight: 700; letter-spacing: -0.5px; }
+  header h1 .pen { font-size: 22px; margin-right: 6px; }
+  header p.hint { color: #6b7280; font-size: 14px; margin-top: 6px; }
+
+  /* ---- 드롭존 ---- */
+  .dropzone {
+    border: 2px dashed #c3c9d4;
+    border-radius: 16px;
+    background: #fff;
+    padding: 64px 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color .15s, background .15s;
+  }
+  .dropzone:hover { border-color: #7c8cf8; }
+  .dropzone.dragover { border-color: #4f63f0; background: #eef1ff; }
+  .dropzone .big { font-size: 44px; margin-bottom: 12px; }
+  .dropzone .main-text { font-size: 17px; font-weight: 600; margin-bottom: 6px; }
+  .dropzone .sub-text { font-size: 13px; color: #8a919e; }
+
+  /* ---- 작업 화면 ---- */
+  #workspace { margin-top: 4px; }
+
+  /* ---- 파일 목록 ---- */
+  #fileList {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    background: #fff;
+    border: 1px solid #e4e7ee;
+    border-radius: 14px;
+    padding: 10px 14px;
+    margin-bottom: 14px;
+  }
+  .chip {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    border: 1px solid #d4d9e3;
+    border-radius: 999px;
+    padding: 5px 6px 5px 12px;
+    font-size: 12.5px;
+    cursor: pointer;
+    background: #f7f8fb;
+    max-width: 240px;
+    transition: border-color .12s, background .12s;
+  }
+  .chip:hover { border-color: #9aa6f5; }
+  .chip.active { border-color: #4f63f0; background: #eef1ff; color: #3345c8; font-weight: 600; }
+  .chip-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .chip-x {
+    border: none !important;
+    background: transparent !important;
+    padding: 0 5px !important;
+    font-size: 14px;
+    color: #8a919e;
+    cursor: pointer;
+    line-height: 1.3;
+    border-radius: 50%;
+  }
+  .chip-x:hover { color: #d33 !important; }
+
+  .toolbar {
+    background: #fff;
+    border: 1px solid #e4e7ee;
+    border-radius: 14px;
+    padding: 14px 18px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px 22px;
+    align-items: center;
+    margin-bottom: 14px;
+  }
+  .ctrl { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+  .ctrl label { font-weight: 600; color: #444a54; white-space: nowrap; }
+  .ctrl input[type=range] { width: 130px; accent-color: #4f63f0; }
+  .ctrl .val { width: 30px; text-align: right; color: #6b7280; font-variant-numeric: tabular-nums; }
+  .ctrl input[type=checkbox] { width: 16px; height: 16px; accent-color: #4f63f0; }
+  .slider-hint {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 12px; font-weight: 600; color: #2f7a3d;
+    background: #eaf7ec; border: 1px solid #bfe5c8;
+    border-radius: 999px; padding: 4px 11px;
+  }
+
+  button {
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    border: 1px solid #d4d9e3;
+    background: #fff;
+    color: #33383f;
+    border-radius: 9px;
+    padding: 8px 14px;
+    cursor: pointer;
+    transition: background .12s, border-color .12s;
+  }
+  button:hover:not(:disabled) { background: #f0f2f7; }
+  button:disabled { opacity: .45; cursor: default; }
+  button.primary {
+    background: #4f63f0; border-color: #4f63f0; color: #fff;
+    padding: 9px 20px; font-size: 14px;
+  }
+  button.primary:hover:not(:disabled) { background: #3d51e0; }
+  .spacer { flex: 1; }
+
+  /* ---- PDF 페이지 이동 + 페이지 선택 ---- */
+  #pdfNav {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
+    background: #eef1ff; border: 1.5px solid #aab6f7; border-radius: 14px;
+    padding: 12px 18px; margin-bottom: 14px; font-size: 14px;
+  }
+  #pdfNav .page-label { font-weight: 700; color: #3345c8; }
+  #pdfNav button { font-size: 14px; padding: 8px 16px; border-color: #aab6f7; }
+  #pageInfo {
+    min-width: 72px; text-align: center; color: #23262b;
+    font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums;
+  }
+  #pageChips {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+    width: 100%; padding-top: 10px; border-top: 1px dashed #b9c2f2;
+  }
+  #pageChips .chips-label {
+    font-size: 12.5px; font-weight: 700; color: #3345c8; margin-right: 2px;
+  }
+  #pageAllBtn { font-size: 12.5px !important; padding: 5px 11px !important; }
+  .pchip {
+    display: inline-flex; align-items: center; gap: 5px;
+    border: 1px solid #b9c2f2; background: #fff; border-radius: 8px;
+    padding: 4px 9px 4px 7px; font-size: 12.5px; font-weight: 600;
+    color: #444a54; cursor: pointer; user-select: none;
+    font-variant-numeric: tabular-nums;
+    transition: border-color .12s, background .12s;
+  }
+  .pchip:hover { border-color: #4f63f0; }
+  .pchip input[type=checkbox] {
+    width: 14px; height: 14px; accent-color: #4f63f0; cursor: pointer; margin: 0;
+  }
+  .pchip.checked { background: #dfe5ff; }
+  .pchip.current { border: 2px solid #4f63f0; padding: 3px 8px 3px 6px; color: #3345c8; }
+  #pageChips .chips-hint { font-size: 12px; color: #5b64a8; margin-left: 4px; }
+
+  /* ---- 미리보기 ---- */
+  .preview-panel {
+    background: #fff;
+    border: 1px solid #e4e7ee;
+    border-radius: 14px;
+    padding: 18px;
+    text-align: center;
+  }
+  .zoom-bar {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+  .zoom-bar button { padding: 4px 11px; font-size: 13px; }
+  #zoomLabel {
+    min-width: 54px;
+    text-align: center;
+    font-size: 12.5px;
+    color: #4b5563;
+    font-variant-numeric: tabular-nums;
+  }
+  .preview-scroll { overflow: auto; max-height: 68vh; }
+  #previewWrap {
+    position: relative;
+    display: inline-block;
+    font-size: 0;
+  }
+  #previewCanvas {
+    display: block;
+    cursor: crosshair;
+    touch-action: none;
+    border-radius: 6px;
+    box-shadow: 0 0 0 1px #e4e7ee;
+    /* 투명 표시용 체커보드 */
+    background:
+      repeating-conic-gradient(#e7e9ef 0% 25%, #ffffff 0% 50%)
+      0 0 / 18px 18px;
+  }
+  #selRect {
+    position: absolute;
+    border: 2px dashed #4f63f0;
+    background: rgba(79, 99, 240, .12);
+    pointer-events: none;
+    border-radius: 2px;
+  }
+  .preview-tip { font-size: 12px; color: #8a919e; margin-top: 10px; }
+
+  #batchHint {
+    font-size: 12px;
+    color: #8a919e;
+    margin: -6px 2px 12px;
+  }
+
+  #status {
+    margin-top: 12px;
+    font-size: 13px;
+    color: #4b5563;
+    text-align: center;
+    min-height: 20px;
+  }
+  #status.error { color: #d33; font-weight: 600; }
+
+  footer { text-align: center; margin-top: 26px; font-size: 12px; color: #a2a8b3; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <a href="../guide/v3.html" target="_blank" rel="noopener" style="float:right;font-size:13px;font-weight:600;color:#4f63f0;text-decoration:none;border:1px solid #d4d9e3;background:#fff;border-radius:9px;padding:8px 14px;margin-left:12px">📖 사용법</a>
+    <h1><span class="pen">✍</span>서명 누끼 v3.1</h1>
+    <p class="hint">서명·도장이 찍힌 사진/스캔/PDF를 끌어다 놓으세요 — 배경을 알아서 지우고 투명 PNG로 저장해 드려요</p>
+  </header>
+
+  <!-- 파일 입력 -->
+  <input type="file" id="fileInput" accept="image/*,application/pdf" multiple hidden>
+
+  <div id="drop" class="dropzone">
+    <div class="big">🖋️</div>
+    <div class="main-text">여기에 파일을 끌어다 놓거나, 클릭해서 선택하세요 (여러 개 가능)</div>
+    <div class="main-text" style="color:#3345c8">📄 PDF를 바로 넣어도 돼요 — 페이지 골라서 도장·서명만 뽑으세요</div>
+    <div class="sub-text">이미지(PNG · JPG · WEBP 등) 또는 PDF &nbsp;·&nbsp; 복사한 이미지는 Cmd+V로 붙여넣기도 돼요</div>
+  </div>
+
+  <div id="workspace" hidden>
+    <div id="fileList" hidden></div>
+
+    <div id="pdfNav" hidden>
+      <span class="page-label">📄 PDF 페이지</span>
+      <button id="prevPageBtn" type="button">◀ 이전</button>
+      <span id="pageInfo">1 / 1</span>
+      <button id="nextPageBtn" type="button">다음 ▶</button>
+      <span style="color:#5b64a8">도장·서명이 있는 페이지로 이동하세요 — 페이지가 바뀌면 누끼도 바로 다시 떠요</span>
+      <div id="pageChips" hidden>
+        <span class="chips-label">저장할 페이지</span>
+        <span id="pageChipList" style="display:contents"></span>
+        <button id="pageAllBtn" type="button">전체 선택</button>
+        <span class="chips-hint">체크한 페이지가 [전체 저장]에 포함돼요 · 번호를 누르면 그 페이지로 이동</span>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <div class="ctrl">
+        <label for="strength">강도</label>
+        <input type="range" id="strength" min="0" max="100" value="100">
+        <span class="val" id="strengthVal">100</span>
+      </div>
+      <div class="ctrl">
+        <label for="softness">가장자리 부드러움</label>
+        <input type="range" id="softness" min="0" max="100" value="100">
+        <span class="val" id="softnessVal">100</span>
+      </div>
+      <span class="slider-hint">✨ 기본값(100/100)이 가장 잘 나와요</span>
+      <div class="ctrl">
+        <input type="checkbox" id="autotrim" checked>
+        <label for="autotrim">여백 자동 제거</label>
+      </div>
+      <div class="spacer"></div>
+      <button id="compareBtn" type="button">원본 보기</button>
+      <button id="clearSelBtn" type="button" disabled>선택 해제</button>
+      <button id="openBtn" type="button">＋ 파일 추가</button>
+      <button id="saveAllBtn" type="button">⬇ 전체 저장</button>
+      <button id="downloadBtn" type="button" class="primary">⬇ 현재 파일 저장</button>
+    </div>
+
+    <p id="batchHint" hidden>💡 브라우저가 "여러 파일 다운로드 허용"을 물어보면 [허용]을 눌러 주세요</p>
+
+    <div class="preview-panel">
+      <div class="zoom-bar">
+        <button id="zoomOutBtn" type="button" title="축소">−</button>
+        <span id="zoomLabel">맞춤</span>
+        <button id="zoomInBtn" type="button" title="확대">＋</button>
+        <button id="zoomFitBtn" type="button" title="화면에 맞추기">맞춤</button>
+      </div>
+      <div class="preview-scroll" id="previewScroll">
+        <div id="previewWrap">
+          <canvas id="previewCanvas"></canvas>
+          <div id="selRect" hidden></div>
+        </div>
+      </div>
+      <div class="preview-tip">💡 마우스 드래그 = <b>저장할 영역 선택</b> · Ctrl+휠(트랙패드 핀치) = 확대/축소 · 스크롤 = 이동 · 영역은 파일·페이지마다 따로 기억돼요</div>
+    </div>
+
+    <p id="status"></p>
+  </div>
+
+  <footer>인터넷 없이도 이미지 처리가 가능해요 · PDF 열기만 인터넷 연결이 필요합니다 · 파일은 컴퓨터 밖으로 전송되지 않아요</footer>
+</div>
+
+<script>
+'use strict';
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+
+  var fileInput = $('fileInput'), dropZone = $('drop'), workspace = $('workspace'),
+      previewCanvas = $('previewCanvas'), previewWrap = $('previewWrap'),
+      previewScroll = $('previewScroll'),
+      zoomInBtn = $('zoomInBtn'), zoomOutBtn = $('zoomOutBtn'),
+      zoomFitBtn = $('zoomFitBtn'), zoomLabel = $('zoomLabel'),
+      selRectEl = $('selRect'), statusEl = $('status'),
+      autotrimEl = $('autotrim'),
+      strengthEl = $('strength'), softnessEl = $('softness'),
+      strengthVal = $('strengthVal'), softnessVal = $('softnessVal'),
+      compareBtn = $('compareBtn'), clearSelBtn = $('clearSelBtn'),
+      openBtn = $('openBtn'), downloadBtn = $('downloadBtn'), saveAllBtn = $('saveAllBtn'),
+      fileListEl = $('fileList'), batchHint = $('batchHint'),
+      pdfNav = $('pdfNav'), prevPageBtn = $('prevPageBtn'),
+      nextPageBtn = $('nextPageBtn'), pageInfo = $('pageInfo'),
+      pageChips = $('pageChips'), pageChipList = $('pageChipList'),
+      pageAllBtn = $('pageAllBtn');
+
+  var PREVIEW_MAX = 1600;    // 미리보기 처리 해상도(긴 변) — 다운로드는 항상 원본 해상도
+                             // (900이면 큰 계약서 속 작은 서명이 1px 미만으로 뭉개져 안 보임)
+  var PDF_TARGET = 2400;     // PDF 렌더 해상도(긴 변)
+  var TRIM_MARGIN = 16;      // 자동 여백 제거 시 남길 여백(px)
+
+  /* ---------------- 다중 파일 상태 ----------------
+     files[i] = { id, name, baseName, kind:'image'|'pdf', sourceCanvas,
+                  previewPrep(지연 계산, prepPage 페이지와 짝으로 캐시),
+                  sel(이미지: 파일별) / selByPage(PDF: 페이지별),
+                  pdfDoc, pdfPage, numPages,
+                  checkedPages({페이지번호:true} — 전체 저장 대상),
+                  pagesTouched(체크박스를 손댔는지 — 안 댔으면 현재 페이지를 따라감),
+                  pageCanvases(방문한 페이지 캔버스 캐시) } */
+  var files = [];
+  var currentIndex = -1;
+  var PAGE_CACHE_MAX = 6;    // PDF 페이지 캔버스 캐시 상한 (메모리 보호)
+  var previewPrep = null;    // 현재 파일의 사전 계산(배경맵·잉크맵·적응 통계)
+  var sel = null;            // 현재 파일·페이지의 선택 영역 {x0,y0,x1,y1} (0~1 정규화)
+  var showOriginal = false;
+  var pdfRendering = false;
+  var uid = 0;
+  var zoomScale = null;      // null = 맞춤(fit), 숫자 = 표시 배율(캔버스px→화면px)
+  var ZOOM_MAX = 8;          // 800%
+
+  /* ---------------- 상태 표시 ---------------- */
+  function setStatus(msg, isError) {
+    statusEl.textContent = msg || '';
+    statusEl.className = isError ? 'error' : '';
+  }
+
+  function errMsg(err) {
+    return err && err.message ? err.message : String(err);
+  }
+
+  /* ---------------- 파일 열기 (다중) ---------------- */
+  function handleFiles(list) {
+    var accepted = 0, i, f, name;
+    for (i = 0; i < list.length; i++) {
+      f = list[i];
+      if (!f) continue;
+      name = (f.name || '').toLowerCase();
+      if (f.type === 'application/pdf' || name.slice(-4) === '.pdf') {
+        addPdf(f); accepted++;
+      } else if (f.type.indexOf('image/') === 0) {
+        addImage(f); accepted++;
+      }
+    }
+    if (!accepted) setStatus('이미지 또는 PDF 파일만 열 수 있어요.', true);
+  }
+
+  function baseNameOf(name) {
+    return (name || '이미지').replace(/\.[^.]+$/, '');
+  }
+
+  function addImage(file) {
+    setStatus('이미지를 불러오는 중…');
+    var url = URL.createObjectURL(file);
+    var img = new Image();
+    img.onload = function () {
+      URL.revokeObjectURL(url);
+      // 원본 해상도 그대로 유지 (다운로드도 원본 해상도로 처리)
+      var c = document.createElement('canvas');
+      c.width = Math.max(1, img.naturalWidth);
+      c.height = Math.max(1, img.naturalHeight);
+      c.getContext('2d').drawImage(img, 0, 0);
+      pushEntry({
+        kind: 'image',
+        name: file.name || ('붙여넣은 이미지 ' + (uid + 1) + '.png'),
+        sourceCanvas: c
+      });
+    };
+    img.onerror = function () {
+      URL.revokeObjectURL(url);
+      setStatus('이미지를 읽지 못했어요. 다른 파일로 시도해 보세요.', true);
+    };
+    img.src = url;
+  }
+
+  function pushEntry(e) {
+    e.id = ++uid;
+    e.baseName = baseNameOf(e.name);
+    e.previewPrep = null;
+    e.prepPage = 0;
+    e.sel = null;
+    if (e.kind === 'pdf') {
+      e.selByPage = {};
+      e.checkedPages = {};
+      e.checkedPages[e.pdfPage] = true; // 기본값: 현재 보는 페이지만 체크
+      e.pagesTouched = false;
+      e.pageCanvases = {};
+      e.pageCanvases[e.pdfPage] = e.sourceCanvas;
+    }
+    files.push(e);
+    if (currentIndex < 0) {
+      switchTo(files.length - 1);
+    } else {
+      renderFileList();
+      setStatus('파일을 추가했어요 (' + files.length + '개) — 목록에서 클릭해 전환하세요');
+    }
+  }
+
+  /* ---------------- PDF (pdf.js CDN lazy load) ---------------- */
+  var PDFJS_VER = '3.11.174';
+  var PDFJS_BASE = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/' + PDFJS_VER + '/';
+  var pdfjsPromise = null;
+
+  function loadPdfJs() {
+    if (window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
+    if (pdfjsPromise) return pdfjsPromise;
+    pdfjsPromise = new Promise(function (resolve, reject) {
+      var s = document.createElement('script');
+      s.src = PDFJS_BASE + 'pdf.min.js';
+      s.onload = function () {
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_BASE + 'pdf.worker.min.js';
+        resolve(window.pdfjsLib);
+      };
+      s.onerror = function () {
+        pdfjsPromise = null;
+        reject(new Error('offline'));
+      };
+      document.head.appendChild(s);
+    });
+    return pdfjsPromise;
+  }
+
+  function addPdf(file) {
+    setStatus('PDF 도구를 불러오는 중…');
+    loadPdfJs().then(function (pdfjsLib) {
+      return file.arrayBuffer().then(function (buf) {
+        return pdfjsLib.getDocument({ data: buf }).promise;
+      });
+    }).then(function (doc) {
+      return renderPdfPageCanvas(doc, 1).then(function (canvas) {
+        pushEntry({
+          kind: 'pdf',
+          name: file.name || '문서.pdf',
+          sourceCanvas: canvas,
+          pdfDoc: doc,
+          pdfPage: 1,
+          numPages: doc.numPages
+        });
+      });
+    }).catch(function (err) {
+      if (err && err.message === 'offline') {
+        setStatus('PDF 처리는 인터넷 연결이 필요합니다. (이미지 파일은 오프라인에서도 사용할 수 있어요)', true);
+      } else {
+        setStatus('PDF를 읽지 못했어요: ' + errMsg(err), true);
+      }
+    });
+  }
+
+  function renderPdfPageCanvas(doc, pageNum) {
+    return doc.getPage(pageNum).then(function (page) {
+      var vp1 = page.getViewport({ scale: 1 });
+      var scale = PDF_TARGET / Math.max(vp1.width, vp1.height);
+      var vp = page.getViewport({ scale: scale });
+      var c = document.createElement('canvas');
+      c.width = Math.max(1, Math.round(vp.width));
+      c.height = Math.max(1, Math.round(vp.height));
+      var ctx = c.getContext('2d');
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, c.width, c.height);
+      return page.render({ canvasContext: ctx, viewport: vp }).promise.then(function () {
+        return c;
+      });
+    });
+  }
+
+  /* 페이지 캔버스 확보 (캐시 우선, 없으면 렌더 후 캐시 — FIFO 상한) */
+  function getPageCanvas(e, pageNum) {
+    if (e.pageCanvases && e.pageCanvases[pageNum]) {
+      return Promise.resolve(e.pageCanvases[pageNum]);
+    }
+    return renderPdfPageCanvas(e.pdfDoc, pageNum).then(function (canvas) {
+      if (e.pageCanvases) {
+        var keys = Object.keys(e.pageCanvases);
+        if (keys.length >= PAGE_CACHE_MAX) {
+          for (var i = 0; i < keys.length; i++) {
+            if (+keys[i] !== e.pdfPage) { delete e.pageCanvases[keys[i]]; break; }
+          }
+        }
+        e.pageCanvases[pageNum] = canvas;
+      }
+      return canvas;
+    });
+  }
+
+  function checkedPageList(e) {
+    if (e.kind !== 'pdf') return [];
+    return Object.keys(e.checkedPages).map(Number).sort(function (a, b) { return a - b; });
+  }
+
+  function renderPageChips() {
+    var e = files[currentIndex];
+    if (!e || e.kind !== 'pdf' || e.numPages < 2) {
+      pageChips.hidden = true;
+      return;
+    }
+    pageChips.hidden = false;
+    pageChipList.innerHTML = '';
+    var allChecked = checkedPageList(e).length === e.numPages;
+    pageAllBtn.textContent = allChecked ? '전체 해제' : '전체 선택';
+    for (var p = 1; p <= e.numPages; p++) {
+      (function (pageNum) {
+        var chip = document.createElement('label');
+        chip.className = 'pchip' +
+          (pageNum === e.pdfPage ? ' current' : '') +
+          (e.checkedPages[pageNum] ? ' checked' : '');
+        var cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.checked = !!e.checkedPages[pageNum];
+        cb.title = pageNum + '페이지를 전체 저장에 포함';
+        cb.addEventListener('click', function (ev) { ev.stopPropagation(); });
+        cb.addEventListener('change', function () {
+          e.pagesTouched = true;
+          if (cb.checked) e.checkedPages[pageNum] = true;
+          else delete e.checkedPages[pageNum];
+          renderPageChips();
+          updateSaveAllBtn();
+          renderFileList();
+        });
+        chip.appendChild(cb);
+        var num = document.createElement('span');
+        num.textContent = pageNum;
+        num.title = pageNum + '페이지 보기';
+        chip.appendChild(num);
+        // 번호(칩 자체) 클릭 = 해당 페이지로 이동 (label 기본 동작은 막고 이동만)
+        chip.addEventListener('click', function (ev) {
+          if (ev.target === cb) return;
+          ev.preventDefault();
+          goToPage(pageNum);
+        });
+        pageChipList.appendChild(chip);
+      })(p);
+    }
+  }
+
+  pageAllBtn.addEventListener('click', function () {
+    var e = files[currentIndex];
+    if (!e || e.kind !== 'pdf') return;
+    e.pagesTouched = true;
+    var allChecked = checkedPageList(e).length === e.numPages;
+    e.checkedPages = {};
+    if (allChecked) {
+      e.checkedPages[e.pdfPage] = true; // 전체 해제 → 현재 페이지만 남김
+    } else {
+      for (var p = 1; p <= e.numPages; p++) e.checkedPages[p] = true;
+    }
+    renderPageChips();
+    updateSaveAllBtn();
+    renderFileList();
+  });
+
+  function updatePdfNav() {
+    var e = files[currentIndex];
+    if (e && e.kind === 'pdf') {
+      pdfNav.hidden = false;
+      pageInfo.textContent = e.pdfPage + ' / ' + e.numPages;
+      prevPageBtn.disabled = pdfRendering || e.pdfPage <= 1;
+      nextPageBtn.disabled = pdfRendering || e.pdfPage >= e.numPages;
+    } else {
+      pdfNav.hidden = true;
+    }
+    renderPageChips();
+  }
+
+  function goToPage(np) {
+    var e = files[currentIndex];
+    if (!e || e.kind !== 'pdf' || pdfRendering) return;
+    if (np < 1 || np > e.numPages || np === e.pdfPage) return;
+    pdfRendering = true;
+    updatePdfNav();
+    setStatus('PDF ' + np + '페이지를 그리는 중…');
+    getPageCanvas(e, np).then(function (canvas) {
+      pdfRendering = false;
+      e.pdfPage = np;
+      e.sourceCanvas = canvas;
+      // 체크박스를 손대기 전이면 "현재 보는 페이지만 체크" 기본값을 따라감
+      if (!e.pagesTouched) {
+        e.checkedPages = {};
+        e.checkedPages[np] = true;
+      }
+      var idx = files.indexOf(e);
+      if (idx === currentIndex && idx >= 0) {
+        switchTo(idx);
+      } else {
+        updatePdfNav();
+        renderFileList();
+      }
+    }).catch(function (err) {
+      pdfRendering = false;
+      updatePdfNav();
+      setStatus('페이지를 그리지 못했어요: ' + errMsg(err), true);
+    });
+  }
+
+  prevPageBtn.addEventListener('click', function () {
+    var e = files[currentIndex];
+    if (e) goToPage(e.pdfPage - 1);
+  });
+  nextPageBtn.addEventListener('click', function () {
+    var e = files[currentIndex];
+    if (e) goToPage(e.pdfPage + 1);
+  });
+
+  /* ---------------- 파일 목록 UI (칩) ---------------- */
+  function renderFileList() {
+    fileListEl.innerHTML = '';
+    files.forEach(function (entry, i) {
+      var chip = document.createElement('div');
+      chip.className = 'chip' + (i === currentIndex ? ' active' : '');
+      var label = document.createElement('span');
+      label.className = 'chip-name';
+      var pdfInfo = '';
+      if (entry.kind === 'pdf' && entry.numPages > 1) {
+        var ck = checkedPageList(entry).length;
+        pdfInfo = ' (p' + entry.pdfPage + (ck > 1 ? ' · ' + ck + '장 선택' : '') + ')';
+      }
+      label.textContent = entry.name + pdfInfo;
+      label.title = entry.name;
+      chip.appendChild(label);
+      var rm = document.createElement('button');
+      rm.type = 'button';
+      rm.className = 'chip-x';
+      rm.textContent = '×';
+      rm.title = '목록에서 제거';
+      rm.addEventListener('click', function (ev) {
+        ev.stopPropagation();
+        removeFile(i);
+      });
+      chip.appendChild(rm);
+      chip.addEventListener('click', function () {
+        if (i !== currentIndex) switchTo(i);
+      });
+      fileListEl.appendChild(chip);
+    });
+    fileListEl.hidden = files.length === 0;
+    updateSaveAllBtn();
+  }
+
+  /* ---- 전체 저장 대상: 모든 파일의 (이미지 1장 + PDF 체크된 페이지들) ---- */
+  function saveItems() {
+    var items = [];
+    files.forEach(function (e) {
+      if (e.kind === 'pdf') {
+        checkedPageList(e).forEach(function (p) { items.push({ e: e, page: p }); });
+      } else {
+        items.push({ e: e, page: null });
+      }
+    });
+    return items;
+  }
+
+  function updateSaveAllBtn() {
+    var count = saveItems().length;
+    saveAllBtn.hidden = count < 2; // 저장 항목 합계 기준 (파일 수 아님)
+    saveAllBtn.textContent = '⬇ 전체 저장 (' + count + '장)';
+  }
+
+  function removeFile(i) {
+    if (i < 0 || i >= files.length) return;
+    files.splice(i, 1);
+    if (!files.length) {
+      currentIndex = -1;
+      previewPrep = null;
+      sel = null;
+      workspace.hidden = true;
+      dropZone.hidden = false;
+      renderFileList();
+      setStatus('');
+      return;
+    }
+    if (i < currentIndex) {
+      currentIndex--;
+      renderFileList();
+    } else if (i === currentIndex) {
+      switchTo(Math.min(i, files.length - 1));
+    } else {
+      renderFileList();
+    }
+  }
+
+  /* ---------------- 선택 영역: 이미지는 파일별, PDF는 페이지별 기억 ---------------- */
+  function getSel(e) {
+    if (!e) return null;
+    if (e.kind === 'pdf') return e.selByPage[e.pdfPage] || null;
+    return e.sel || null;
+  }
+
+  function setSelFor(e, s) {
+    if (!e) return;
+    if (e.kind === 'pdf') {
+      if (s) e.selByPage[e.pdfPage] = s;
+      else delete e.selByPage[e.pdfPage];
+    } else {
+      e.sel = s;
+    }
+  }
+
+  /* ---------------- 파일 전환 & 미리보기 준비 ---------------- */
+  function switchTo(i) {
+    if (i < 0 || i >= files.length) return;
+    currentIndex = i;
+    var e = files[i];
+    var pageKey = e.kind === 'pdf' ? e.pdfPage : 0;
+    if (!e.previewPrep || e.prepPage !== pageKey) {
+      // 미리보기용 축소 캔버스 (미리보기 즉시성 유지) — 파일별 캐시
+      var scale = Math.min(1, PREVIEW_MAX / Math.max(e.sourceCanvas.width, e.sourceCanvas.height));
+      var pc = document.createElement('canvas');
+      pc.width = Math.max(1, Math.round(e.sourceCanvas.width * scale));
+      pc.height = Math.max(1, Math.round(e.sourceCanvas.height * scale));
+      var pctx = pc.getContext('2d');
+      pctx.imageSmoothingEnabled = true;
+      pctx.imageSmoothingQuality = 'high';
+      pctx.drawImage(e.sourceCanvas, 0, 0, pc.width, pc.height);
+      e.previewPrep = prepare(pc);
+      e.prepPage = pageKey;
+    }
+    previewPrep = e.previewPrep;
+    previewCanvas.width = previewPrep.w;
+    previewCanvas.height = previewPrep.h;
+    sel = getSel(e);
+    showOriginal = false;
+    compareBtn.textContent = '원본 보기';
+    dropZone.hidden = true;
+    workspace.hidden = false;
+    cancelZoomAnim();
+    zoomScale = null; // 파일/페이지 전환 시 맞춤(fit)으로 리셋
+    previewScroll.scrollLeft = 0;
+    previewScroll.scrollTop = 0;
+    applyZoom();
+    updatePdfNav();
+    renderFileList();
+    renderPreview();
+    updateSelRect();
+    setStatus(e.name + ' (' + e.sourceCanvas.width + '×' + e.sourceCanvas.height + 'px) — 배경을 지웠어요. 저장할 부분만 드래그로 선택할 수 있어요');
+  }
+
+  /* ================================================================
+     v2 배경 제거 파이프라인 (signature_cutout.py cutout() 이식)
+      1) 채널별 배경 추정: 팽창(max filter) 후 강한 블러 → 그림자·비네팅 보정
+      2) 잉크 강도 ink = max_channel(bg - src)
+      3) 적응 임계값: 노이즈 바닥(median+4σ)과 실제 잉크 대비(p99.7) 측정
+      4) alpha = smoothstep^0.8 (얇은 획 보강)
+      5) 잡티 제거: support = max3(median3(alpha)) 지지대 방식 (고립 픽셀만 —
+         밀도 기반 소거는 도장 그레인 질감을 갉아먹어 넣지 않음. 임계값은
+         강도/부드러움 슬라이더로 사용자가 직접 조절)
+      6) 가장자리 AA: alpha = max(alpha, blur0.6(alpha)), <0.06 → 0
+      8) 잉크색 복원(decontamination) + 배경 밝기 상한 클램프
+      8.5) 밝은 잡점 가드(저알파 α<0.6 한정): 복원 잉크가 평균 잉크 대비
+           너무 밝으면 종이색 오염 잡티로 보고 제거 → 어두운 배경 흰 잡티 방지
+      9) 평균 잉크색 수렴(가장자리) + 투명 픽셀 RGB 채움
+     ================================================================ */
+
+  /* --- 1D 슬라이딩 최대값 (단조 데크, O(n)) --- */
+  function maxFilter1D(line, n, r, out, dq) {
+    var head = 0, tail = 0, i, c, v;
+    for (i = 0; i < n + r; i++) {
+      if (i < n) {
+        v = line[i];
+        while (tail > head && line[dq[tail - 1]] <= v) tail--;
+        dq[tail++] = i;
+      }
+      c = i - r;
+      if (c >= 0) {
+        while (dq[head] < c - r) head++;
+        out[c] = line[dq[head]];
+      }
+    }
+  }
+
+  /* --- 2D 분리형 max filter (팽창), chan 제자리 갱신 --- */
+  function maxFilter2D(chan, w, h, r, tmp, lineIn, lineOut, dq) {
+    var x, y;
+    for (y = 0; y < h; y++) {
+      maxFilter1D(chan.subarray(y * w, y * w + w), w, r, tmp.subarray(y * w, y * w + w), dq);
+    }
+    for (x = 0; x < w; x++) {
+      for (y = 0; y < h; y++) lineIn[y] = tmp[y * w + x];
+      maxFilter1D(lineIn, h, r, lineOut, dq);
+      for (y = 0; y < h; y++) chan[y * w + x] = lineOut[y];
+    }
+  }
+
+  /* --- 강한 블러 근사: 축소 → 확대 --- */
+  function downUpBlur(canvas, radius) {
+    var w = canvas.width, h = canvas.height;
+    var f = Math.max(2, Math.round(radius * 1.2));
+    var tw = Math.max(2, Math.round(w / f)), th = Math.max(2, Math.round(h / f));
+    var cur = canvas, half, hctx;
+    while (cur.width >= tw * 4 && cur.height >= th * 4) {
+      half = document.createElement('canvas');
+      half.width = Math.max(tw, Math.round(cur.width / 2));
+      half.height = Math.max(th, Math.round(cur.height / 2));
+      hctx = half.getContext('2d');
+      hctx.imageSmoothingEnabled = true; hctx.imageSmoothingQuality = 'high';
+      hctx.drawImage(cur, 0, 0, half.width, half.height);
+      cur = half;
+    }
+    var small = document.createElement('canvas');
+    small.width = tw; small.height = th;
+    var sctx = small.getContext('2d');
+    sctx.imageSmoothingEnabled = true; sctx.imageSmoothingQuality = 'high';
+    sctx.drawImage(cur, 0, 0, tw, th);
+    var out = document.createElement('canvas');
+    out.width = w; out.height = h;
+    var octx = out.getContext('2d', { willReadFrequently: true });
+    octx.imageSmoothingEnabled = true; octx.imageSmoothingQuality = 'high';
+    octx.drawImage(small, 0, 0, w, h);
+    return octx.getImageData(0, 0, w, h).data;
+  }
+
+  /* --- 분리형 가우시안 블러 (Float32) --- */
+  function makeKernel(sigma) {
+    var r = Math.max(1, Math.ceil(sigma * 2.5));
+    var k = new Float32Array(2 * r + 1), s = 0, i, v;
+    for (i = -r; i <= r; i++) {
+      v = Math.exp(-(i * i) / (2 * sigma * sigma));
+      k[i + r] = v; s += v;
+    }
+    for (i = 0; i < k.length; i++) k[i] /= s;
+    return { k: k, r: r };
+  }
+  var K06 = makeKernel(0.6);
+
+  function gaussBlur(src, dst, tmp, w, h, kern) {
+    var k = kern.k, r = kern.r, x, y, t, s, row, xx, yy;
+    for (y = 0; y < h; y++) {
+      row = y * w;
+      for (x = 0; x < w; x++) {
+        s = 0;
+        for (t = -r; t <= r; t++) {
+          xx = x + t;
+          if (xx < 0) xx = 0; else if (xx >= w) xx = w - 1;
+          s += src[row + xx] * k[t + r];
+        }
+        tmp[row + x] = s;
+      }
+    }
+    for (y = 0; y < h; y++) {
+      row = y * w;
+      for (x = 0; x < w; x++) {
+        s = 0;
+        for (t = -r; t <= r; t++) {
+          yy = y + t;
+          if (yy < 0) yy = 0; else if (yy >= h) yy = h - 1;
+          s += tmp[yy * w + x] * k[t + r];
+        }
+        dst[row + x] = s;
+      }
+    }
+  }
+
+  /* --- 3×3 미디언 (9원소 정렬 네트워크, Devillard opt_med9) --- */
+  function med9(a0, a1, a2, a3, a4, a5, a6, a7, a8) {
+    var t;
+    if (a1 > a2) { t = a1; a1 = a2; a2 = t; }
+    if (a4 > a5) { t = a4; a4 = a5; a5 = t; }
+    if (a7 > a8) { t = a7; a7 = a8; a8 = t; }
+    if (a0 > a1) { t = a0; a0 = a1; a1 = t; }
+    if (a3 > a4) { t = a3; a3 = a4; a4 = t; }
+    if (a6 > a7) { t = a6; a6 = a7; a7 = t; }
+    if (a1 > a2) { t = a1; a1 = a2; a2 = t; }
+    if (a4 > a5) { t = a4; a4 = a5; a5 = t; }
+    if (a7 > a8) { t = a7; a7 = a8; a8 = t; }
+    if (a0 > a3) { t = a0; a0 = a3; a3 = t; }
+    if (a5 > a8) { t = a5; a5 = a8; a8 = t; }
+    if (a4 > a7) { t = a4; a4 = a7; a7 = t; }
+    if (a3 > a6) { t = a3; a3 = a6; a6 = t; }
+    if (a1 > a4) { t = a1; a1 = a4; a4 = t; }
+    if (a2 > a5) { t = a2; a2 = a5; a5 = t; }
+    if (a4 > a7) { t = a4; a4 = a7; a7 = t; }
+    if (a4 > a2) { t = a4; a4 = a2; a2 = t; }
+    if (a6 > a4) { t = a6; a6 = a4; a4 = t; }
+    if (a4 > a2) { t = a4; a4 = a2; a2 = t; }
+    return a4;
+  }
+
+  function median3x3(src, dst, w, h) {
+    var x, y, xm, xp, r0, r1, r2, ym, yp;
+    for (y = 0; y < h; y++) {
+      ym = y > 0 ? y - 1 : 0;
+      yp = y < h - 1 ? y + 1 : h - 1;
+      r0 = ym * w; r1 = y * w; r2 = yp * w;
+      for (x = 0; x < w; x++) {
+        xm = x > 0 ? x - 1 : 0;
+        xp = x < w - 1 ? x + 1 : w - 1;
+        dst[r1 + x] = med9(
+          src[r0 + xm], src[r0 + x], src[r0 + xp],
+          src[r1 + xm], src[r1 + x], src[r1 + xp],
+          src[r2 + xm], src[r2 + x], src[r2 + xp]);
+      }
+    }
+  }
+
+  /* --- 3×3 max (분리형) --- */
+  function max3x3(src, dst, tmp, w, h) {
+    var x, y, row, r0, r1, r2, a, b, c, v;
+    for (y = 0; y < h; y++) {
+      row = y * w;
+      for (x = 0; x < w; x++) {
+        a = src[row + (x > 0 ? x - 1 : 0)];
+        b = src[row + x];
+        c = src[row + (x < w - 1 ? x + 1 : w - 1)];
+        v = a > b ? a : b; if (c > v) v = c;
+        tmp[row + x] = v;
+      }
+    }
+    for (y = 0; y < h; y++) {
+      r0 = (y > 0 ? y - 1 : 0) * w;
+      r1 = y * w;
+      r2 = (y < h - 1 ? y + 1 : h - 1) * w;
+      for (x = 0; x < w; x++) {
+        a = tmp[r0 + x]; b = tmp[r1 + x]; c = tmp[r2 + x];
+        v = a > b ? a : b; if (c > v) v = c;
+        dst[r1 + x] = v;
+      }
+    }
+  }
+
+  function percentileFromHist(hist, total, q) {
+    var target = q * total, cum = 0, b;
+    for (b = 0; b < 256; b++) {
+      cum += hist[b];
+      if (cum >= target) return b;
+    }
+    return 255;
+  }
+
+  /* --- 사전 계산: 배경맵·잉크맵·적응 통계 --- */
+  function prepare(srcCanvas) {
+    var w = srcCanvas.width, h = srcCanvas.height, n = w * h;
+    var src = srcCanvas.getContext('2d', { willReadFrequently: true })
+      .getImageData(0, 0, w, h).data;
+
+    // 채널 분리
+    var r8 = new Uint8Array(n), g8 = new Uint8Array(n), b8 = new Uint8Array(n);
+    var i, p;
+    for (i = 0, p = 0; i < n; i++, p += 4) {
+      r8[i] = src[p]; g8[i] = src[p + 1]; b8[i] = src[p + 2];
+    }
+
+    // 1) 팽창(MaxFilter): 잉크 획을 지워 배경 추정이 획에 끌려 내려가지 않게
+    var k = Math.min(31, Math.max(9, ((Math.min(w, h) / 100) | 0) | 1));
+    var r = (k - 1) >> 1;
+    var L = Math.max(w, h);
+    var tmp8 = new Uint8Array(n);
+    var lineIn = new Uint8Array(L), lineOut = new Uint8Array(L);
+    var dq = new Int32Array(L);
+    maxFilter2D(r8, w, h, r, tmp8, lineIn, lineOut, dq);
+    maxFilter2D(g8, w, h, r, tmp8, lineIn, lineOut, dq);
+    maxFilter2D(b8, w, h, r, tmp8, lineIn, lineOut, dq);
+
+    // 팽창 결과 → 강한 블러(축소→확대 근사) = 채널별 배경 밝기 맵
+    var dilCan = document.createElement('canvas');
+    dilCan.width = w; dilCan.height = h;
+    var dctx = dilCan.getContext('2d');
+    var dimg = dctx.createImageData(w, h);
+    var dd = dimg.data;
+    for (i = 0, p = 0; i < n; i++, p += 4) {
+      dd[p] = r8[i]; dd[p + 1] = g8[i]; dd[p + 2] = b8[i]; dd[p + 3] = 255;
+    }
+    dctx.putImageData(dimg, 0, 0);
+    var radius = Math.max(20, (Math.min(w, h) / 12) | 0);
+    var bg = downUpBlur(dilCan, radius);
+
+    // 2) 잉크 강도 = 채널 최대(bg - src) → 파란 펜도 강하게 검출
+    var ink = new Float32Array(n);
+    var dr, dg, db, m;
+    for (i = 0, p = 0; i < n; i++, p += 4) {
+      dr = bg[p] - src[p];
+      dg = bg[p + 1] - src[p + 1];
+      db = bg[p + 2] - src[p + 2];
+      m = dr > dg ? dr : dg;
+      if (db > m) m = db;
+      ink[i] = m > 0 ? m : 0;
+    }
+
+    // 3) 적응 통계: 노이즈 바닥(p90 미만 부분집합의 median + 4σ), 잉크 대비(p99.7)
+    var hist = new Int32Array(256);
+    var v;
+    for (i = 0; i < n; i++) {
+      v = ink[i] | 0;
+      hist[v > 255 ? 255 : v]++;
+    }
+    var p90 = percentileFromHist(hist, n, 0.90);
+    var p997 = percentileFromHist(hist, n, 0.997);
+    var cnt = 0, sum = 0, sumsq = 0, b;
+    for (b = 0; b < p90; b++) {
+      cnt += hist[b];
+      sum += hist[b] * b;
+      sumsq += hist[b] * b * b;
+    }
+    var noise = 4;
+    if (cnt > 0) {
+      var half = cnt / 2, acc = 0, med = 0;
+      for (b = 0; b < p90; b++) {
+        acc += hist[b];
+        if (acc >= half) { med = b; break; }
+      }
+      var mean = sum / cnt;
+      var vr = sumsq / cnt - mean * mean;
+      if (vr < 0) vr = 0;
+      noise = med + 4 * Math.sqrt(vr);
+    }
+    var peak = Math.max(p997, 12);
+
+    return { w: w, h: h, src: src, bg: bg, ink: ink, noise: noise, peak: peak };
+  }
+
+  /* --- 임계값 계산 (v2 매핑: 슬라이더가 임계값을 직접 결정) ---
+       강도: 파이썬 strength 파라미터(임계값을 나눔), 50 = 1.0 → 4^((s-50)/50)
+       부드러움: lo~hi 폭 배율, 50 = 1.0 (파이썬 기본과 동일) → max(0.15, f/50) */
+  function thresholds(prep, strengthSlider, softSlider) {
+    var s = strengthSlider === undefined ? 100 : +strengthSlider;
+    var f = softSlider === undefined ? 100 : +softSlider;
+    var strength = Math.pow(4, (s - 50) / 50);   // 0.25 ~ 4
+    var softF = Math.max(0.15, f / 50);          // 0.15 ~ 2
+    var lo = Math.max(4, prep.noise, 0.10 * prep.peak) / strength;
+    var hiBase = Math.max(lo + 6, 0.35 * prep.peak / strength);
+    var hi = lo + Math.max(2, (hiBase - lo) * softF);
+    return { lo: lo, hi: hi };
+  }
+
+  /* --- 임계값 이후 단계 전체 실행 → 스트레이트 알파 RGBA 반환 --- */
+  function applyPipeline(prep, strength, softness) {
+    var w = prep.w, h = prep.h, n = w * h;
+    var src = prep.src, bg = prep.bg, ink = prep.ink;
+
+    var th = thresholds(prep, strength, softness);
+    var lo = th.lo, hi = th.hi;
+    var inv = 1 / (hi - lo);
+
+    // 4) alpha = smoothstep^0.8 (LUT)
+    var LUT = new Float32Array(1025);
+    var j, t, s;
+    for (j = 0; j <= 1024; j++) {
+      t = j / 1024;
+      s = t * t * (3 - 2 * t);
+      LUT[j] = Math.pow(s, 0.8);
+    }
+    var alpha = new Float32Array(n);
+    var a8 = new Uint8Array(n);
+    var i, p, a, x;
+    for (i = 0; i < n; i++) {
+      x = (ink[i] - lo) * inv;
+      if (x <= 0) a = 0;
+      else if (x >= 1) a = 1;
+      else a = LUT[(x * 1024) | 0];
+      alpha[i] = a;
+      a8[i] = (a * 255 + 0.5) | 0;
+    }
+
+    // 5) 잡티 제거(지지대): support = max3(median3(alpha)); support≤0.04 → 0
+    //    (획 자체의 알파는 건드리지 않음)
+    var m8 = new Uint8Array(n), s8 = new Uint8Array(n);
+    median3x3(a8, m8, w, h);
+    max3x3(m8, s8, a8, w, h); // a8은 임시 버퍼로 재사용
+    for (i = 0; i < n; i++) if (s8[i] <= 10) alpha[i] = 0; // 10/255 ≈ 0.04
+
+    // 6) 가장자리 AA: 바깥 방향으로만 미세 블러(max 결합), 이후 <0.06 → 0
+    var f1 = new Float32Array(n), f2 = new Float32Array(n);
+    gaussBlur(alpha, f1, f2, w, h, K06);
+    var bl;
+    for (i = 0; i < n; i++) {
+      a = alpha[i];
+      bl = f1[i];
+      if (bl > a) a = bl;
+      if (a < 0.06) a = 0;
+      alpha[i] = a;
+    }
+
+    // 8) 잉크색 복원 1차 통과: 전역 평균 잉크색(α² 가중) 계산
+    //    ink_rgb = clamp((src − bg·(1−α)) / max(α, 0.30)), 채널별 min(ink, bg) 클램프
+    var ia, denom, rr, gg, bb, w2;
+    function meanInk() {
+      var wsum = 0, sr = 0, sg2 = 0, sb2 = 0, i2, p2, a2;
+      for (i2 = 0, p2 = 0; i2 < n; i2++, p2 += 4) {
+        a2 = alpha[i2];
+        if (a2 <= 0) continue;
+        ia = 1 - a2;
+        denom = a2 < 0.30 ? 0.30 : a2;
+        rr = (src[p2] - bg[p2] * ia) / denom;
+        if (rr < 0) rr = 0; else if (rr > 255) rr = 255;
+        if (rr > bg[p2]) rr = bg[p2];
+        gg = (src[p2 + 1] - bg[p2 + 1] * ia) / denom;
+        if (gg < 0) gg = 0; else if (gg > 255) gg = 255;
+        if (gg > bg[p2 + 1]) gg = bg[p2 + 1];
+        bb = (src[p2 + 2] - bg[p2 + 2] * ia) / denom;
+        if (bb < 0) bb = 0; else if (bb > 255) bb = 255;
+        if (bb > bg[p2 + 2]) bb = bg[p2 + 2];
+        w2 = a2 * a2;
+        wsum += w2;
+        sr += rr * w2; sg2 += gg * w2; sb2 += bb * w2;
+      }
+      return wsum > 1 ? [sr / wsum, sg2 / wsum, sb2 / wsum] : [0, 0, 0];
+    }
+    var mi = meanInk();
+
+    // 8.5) 밝은 잡점 가드(저알파 한정): 복원 잉크 밝기가 "평균 잉크 55% + 그 지점
+    //      종이 45%" 혼합보다 밝으면 종이색이 섞인 잡티(흰 테두리 잡점)로 보고 제거.
+    //      α<0.6 인 옅은 픽셀에만 적용 — 알파 높은 픽셀(옅은 잉크 서명·도장 그레인
+    //      질감)은 통째로 걸리지 않도록 보호. (어두운 배경 위 흰 잡티 방지 용도)
+    var meanL = (mi[0] + mi[1] + mi[2]) / 3, inkL, thrL;
+    for (i = 0, p = 0; i < n; i++, p += 4) {
+      a = alpha[i];
+      if (a <= 0 || a >= 0.6) continue;
+      ia = 1 - a;
+      denom = a < 0.30 ? 0.30 : a;
+      rr = (src[p] - bg[p] * ia) / denom;
+      if (rr < 0) rr = 0; else if (rr > bg[p]) rr = bg[p];
+      gg = (src[p + 1] - bg[p + 1] * ia) / denom;
+      if (gg < 0) gg = 0; else if (gg > bg[p + 1]) gg = bg[p + 1];
+      bb = (src[p + 2] - bg[p + 2] * ia) / denom;
+      if (bb < 0) bb = 0; else if (bb > bg[p + 2]) bb = bg[p + 2];
+      inkL = (rr + gg + bb) / 3;
+      thrL = 0.55 * meanL + 0.15 * (bg[p] + bg[p + 1] + bg[p + 2]);
+      if (inkL > thrL) alpha[i] = 0;
+    }
+    mi = meanInk(); // 잡점 제거 후 평균 잉크색 재계산(색 오염 방지)
+    var mR = mi[0], mG = mi[1], mB = mi[2];
+
+    // 9) 2차 통과: 가장자리(α<0.45)는 평균 잉크색으로 수렴, 투명 픽셀 RGB도 채움
+    var out = new Uint8ClampedArray(n * 4);
+    var ew;
+    for (i = 0, p = 0; i < n; i++, p += 4) {
+      a = alpha[i];
+      if (a <= 0.003) {
+        out[p] = mR; out[p + 1] = mG; out[p + 2] = mB;
+        out[p + 3] = (a * 255 + 0.5) | 0;
+        continue;
+      }
+      ia = 1 - a;
+      denom = a < 0.30 ? 0.30 : a;
+      rr = (src[p] - bg[p] * ia) / denom;
+      if (rr < 0) rr = 0; else if (rr > 255) rr = 255;
+      if (rr > bg[p]) rr = bg[p];
+      gg = (src[p + 1] - bg[p + 1] * ia) / denom;
+      if (gg < 0) gg = 0; else if (gg > 255) gg = 255;
+      if (gg > bg[p + 1]) gg = bg[p + 1];
+      bb = (src[p + 2] - bg[p + 2] * ia) / denom;
+      if (bb < 0) bb = 0; else if (bb > 255) bb = 255;
+      if (bb > bg[p + 2]) bb = bg[p + 2];
+      ew = (a - 0.45) / 0.35;
+      if (ew < 0) ew = 0; else if (ew > 1) ew = 1;
+      out[p] = rr * ew + mR * (1 - ew);
+      out[p + 1] = gg * ew + mG * (1 - ew);
+      out[p + 2] = bb * ew + mB * (1 - ew);
+      out[p + 3] = a * 255 + 0.5;
+    }
+    return out;
+  }
+
+  /* ---------------- 미리보기 렌더 ---------------- */
+  function renderPreview() {
+    if (!previewPrep) return;
+    var ctx = previewCanvas.getContext('2d');
+    var w = previewPrep.w, h = previewPrep.h;
+    if (showOriginal) {
+      var n = w * h;
+      var img = new ImageData(w, h);
+      var od = img.data, src = previewPrep.src;
+      for (var i = 0, p = 0; i < n; i++, p += 4) {
+        od[p] = src[p]; od[p + 1] = src[p + 1]; od[p + 2] = src[p + 2]; od[p + 3] = 255;
+      }
+      ctx.putImageData(img, 0, 0);
+    } else {
+      var rgba = applyPipeline(previewPrep, +strengthEl.value, +softnessEl.value);
+      ctx.putImageData(new ImageData(rgba, w, h), 0, 0);
+    }
+  }
+
+  compareBtn.addEventListener('click', function () {
+    showOriginal = !showOriginal;
+    compareBtn.textContent = showOriginal ? '결과 보기' : '원본 보기';
+    renderPreview();
+  });
+
+  /* ---- 슬라이더: 실시간 미리보기 (rAF로 연속 입력 병합) ---- */
+  var previewQueued = false;
+  function queuePreview() {
+    if (previewQueued) return;
+    previewQueued = true;
+    requestAnimationFrame(function () {
+      previewQueued = false;
+      renderPreview();
+    });
+  }
+  function onSliderInput() {
+    strengthVal.textContent = strengthEl.value;
+    softnessVal.textContent = softnessEl.value;
+    queuePreview();
+  }
+  strengthEl.addEventListener('input', onSliderInput);
+  softnessEl.addEventListener('input', onSliderInput);
+
+  /* ---------------- 미리보기 확대/축소(줌)·이동(팬) ----------------
+     줌 = 캔버스 CSS 표시 크기 확대 → overflow:auto 컨테이너에서
+     트랙패드 두 손가락 스크롤/스크롤바로 자연스럽게 팬.
+     선택 좌표는 getBoundingClientRect 기반 정규화라 줌·스크롤에 자동 정합. */
+  function fitScale() {
+    if (!previewPrep) return 1;
+    var availW = previewScroll.clientWidth || previewCanvas.width;
+    var availH = Math.round(window.innerHeight * 0.66);
+    var s = Math.min(availW / previewCanvas.width, availH / previewCanvas.height, 1);
+    return s > 0 ? s : 1;
+  }
+
+  function currentScale() {
+    return zoomScale === null ? fitScale() : zoomScale;
+  }
+
+  function applyZoom() {
+    if (!previewPrep) return;
+    var s = currentScale();
+    previewCanvas.style.width = Math.max(1, Math.round(previewCanvas.width * s)) + 'px';
+    previewCanvas.style.height = Math.max(1, Math.round(previewCanvas.height * s)) + 'px';
+    zoomLabel.textContent = (zoomScale === null ? '맞춤 ' : '') + Math.round(s * 100) + '%';
+    updateSelRect();
+  }
+
+  function setZoom(target, cx, cy) {
+    if (!previewPrep) return;
+    var fs = fitScale();
+    if (target <= fs * 1.001) { // 맞춤 이하로는 내려가지 않고 맞춤으로 복귀
+      zoomScale = null;
+      previewScroll.scrollLeft = 0;
+      previewScroll.scrollTop = 0;
+      applyZoom();
+      return;
+    }
+    var s = Math.min(ZOOM_MAX, target);
+    var old = currentScale();
+    if (cx === undefined) { // 버튼 줌: 보이는 영역 중앙 기준
+      var sr = previewScroll.getBoundingClientRect();
+      cx = sr.left + previewScroll.clientWidth / 2;
+      cy = sr.top + previewScroll.clientHeight / 2;
+    }
+    var rect = previewCanvas.getBoundingClientRect();
+    var u = (cx - rect.left) / old;  // 커서 아래의 캔버스 픽셀 좌표
+    var v = (cy - rect.top) / old;
+    zoomScale = s;
+    applyZoom();
+    // 커서 아래 지점이 그대로 머물도록 스크롤 보정
+    var nr = previewCanvas.getBoundingClientRect();
+    previewScroll.scrollLeft += (nr.left + u * s) - cx;
+    previewScroll.scrollTop += (nr.top + v * s) - cy;
+    updateSelRect();
+  }
+
+  /* ---- [+]/[−] 버튼: 25%p 단위 (100→125→150→…→800), 0.1s rAF 보간으로 부드럽게.
+          매 프레임 setZoom을 거치므로 선택 영역·커서 보정이 항상 정합 ---- */
+  var ZOOM_STEP = 0.25;
+  var zoomAnimId = 0;
+
+  function cancelZoomAnim() {
+    if (zoomAnimId) { cancelAnimationFrame(zoomAnimId); zoomAnimId = 0; }
+  }
+
+  function animateZoomTo(target) {
+    cancelZoomAnim();
+    var from = currentScale();
+    var fs = fitScale();
+    if (target > ZOOM_MAX) target = ZOOM_MAX;
+    if (target < fs) target = fs; // 맞춤 미만으로는 맞춤에서 멈춤
+    if (Math.abs(target - from) < 1e-4) { setZoom(target); return; }
+    var t0 = performance.now(), DUR = 100;
+    function frame(now) {
+      var t = Math.min(1, (now - t0) / DUR);
+      var k = t * (2 - t); // ease-out
+      setZoom(from + (target - from) * k);
+      zoomAnimId = t < 1 ? requestAnimationFrame(frame) : 0;
+    }
+    zoomAnimId = requestAnimationFrame(frame);
+  }
+
+  zoomInBtn.addEventListener('click', function () {
+    // 다음 25% 배수로 (예: 100%→125%, 연속 줌 237%→250%, 맞춤 43%→50%)
+    animateZoomTo((Math.floor(currentScale() / ZOOM_STEP + 1e-6) + 1) * ZOOM_STEP);
+  });
+  zoomOutBtn.addEventListener('click', function () {
+    animateZoomTo((Math.ceil(currentScale() / ZOOM_STEP - 1e-6) - 1) * ZOOM_STEP);
+  });
+  zoomFitBtn.addEventListener('click', function () { cancelZoomAnim(); setZoom(0); });
+
+  // Ctrl/Cmd+휠(맥 트랙패드 핀치 포함) = 부드러운 연속 줌(커서 중심), 일반 스크롤 = 팬.
+  // 캔버스 비트맵은 다시 그리지 않고 CSS 표시 크기만 바꾸므로 제스처 내내 가볍고 선명함.
+  previewScroll.addEventListener('wheel', function (e) {
+    if (!previewPrep) return;
+    if (!(e.ctrlKey || e.metaKey)) return;
+    e.preventDefault();
+    cancelZoomAnim();
+    // 델타 정규화: 마우스 휠은 노치당 ±100~120(또는 deltaMode=1/2)이라 그대로 쓰면
+    // 한 이벤트에 ×3 이상 튐. 라인/페이지 모드를 픽셀로 환산 후 감쇠를 낮추고,
+    // 이벤트당 배율을 ±18%로 클램프 → 휠 한 노치 ≈ 100→118→139…%.
+    // 트랙패드 핀치(델타 1~10)는 클램프에 걸리지 않아 기존처럼 연속·자연스러움.
+    var dy = e.deltaY;
+    if (e.deltaMode === 1) dy *= 16; else if (e.deltaMode === 2) dy *= 100;
+    var factor = Math.exp(-dy * 0.0022);
+    factor = Math.min(1.18, Math.max(1 / 1.18, factor));
+    setZoom(currentScale() * factor, e.clientX, e.clientY);
+  }, { passive: false });
+
+  /* ---------------- 영역 선택 (드래그, 파일별 유지) ---------------- */
+  var dragging = false, dragStart = null;
+
+  function persistSel() {
+    if (files[currentIndex]) setSelFor(files[currentIndex], sel);
+  }
+
+  function canvasNorm(e) {
+    var r = previewCanvas.getBoundingClientRect();
+    var x = (e.clientX - r.left) / r.width;
+    var y = (e.clientY - r.top) / r.height;
+    return {
+      x: Math.min(1, Math.max(0, x)),
+      y: Math.min(1, Math.max(0, y))
+    };
+  }
+
+  function updateSelRect() {
+    if (!sel) { selRectEl.hidden = true; clearSelBtn.disabled = true; return; }
+    var r = previewCanvas.getBoundingClientRect();
+    var wr = previewWrap.getBoundingClientRect();
+    var ox = r.left - wr.left, oy = r.top - wr.top;
+    selRectEl.style.left = (ox + sel.x0 * r.width) + 'px';
+    selRectEl.style.top = (oy + sel.y0 * r.height) + 'px';
+    selRectEl.style.width = ((sel.x1 - sel.x0) * r.width) + 'px';
+    selRectEl.style.height = ((sel.y1 - sel.y0) * r.height) + 'px';
+    selRectEl.hidden = false;
+    clearSelBtn.disabled = false;
+  }
+
+  function clearSelection() {
+    sel = null;
+    persistSel();
+    updateSelRect();
+  }
+
+  previewCanvas.addEventListener('pointerdown', function (e) {
+    if (!previewPrep) return;
+    dragging = true;
+    dragStart = canvasNorm(e);
+    sel = { x0: dragStart.x, y0: dragStart.y, x1: dragStart.x, y1: dragStart.y };
+    updateSelRect();
+    try { previewCanvas.setPointerCapture(e.pointerId); } catch (err) {}
+    e.preventDefault();
+  });
+
+  previewCanvas.addEventListener('pointermove', function (e) {
+    if (!dragging) return;
+    var cur = canvasNorm(e);
+    sel = {
+      x0: Math.min(dragStart.x, cur.x), y0: Math.min(dragStart.y, cur.y),
+      x1: Math.max(dragStart.x, cur.x), y1: Math.max(dragStart.y, cur.y)
+    };
+    updateSelRect();
+  });
+
+  previewCanvas.addEventListener('pointerup', function (e) {
+    if (!dragging) return;
+    dragging = false;
+    try { previewCanvas.releasePointerCapture(e.pointerId); } catch (err) {}
+    var r = previewCanvas.getBoundingClientRect();
+    if (!sel || (sel.x1 - sel.x0) * r.width < 6 || (sel.y1 - sel.y0) * r.height < 6) {
+      clearSelection(); // 너무 작으면 단순 클릭으로 보고 해제
+    } else {
+      persistSel();
+      setStatus('선택한 영역만 저장돼요 — 다시 드래그하면 영역이 바뀌고, [선택 해제]로 전체 저장으로 돌아가요');
+    }
+  });
+
+  clearSelBtn.addEventListener('click', function () {
+    clearSelection();
+    setStatus('선택을 해제했어요 — 전체 영역이 저장돼요');
+  });
+
+  window.addEventListener('resize', function () {
+    if (zoomScale === null) applyZoom(); // 맞춤 모드면 배율 재계산
+    else updateSelRect();
+  });
+
+  /* ---------------- RGBA 배열 크롭 / 자동 여백 ----------------
+     캔버스를 거치지 않고 배열에서 직접 처리 → 프리멀티플라이 손실 없음 */
+  function cropRgba(data, w, h, sx, sy, cw, ch) {
+    var out = new Uint8ClampedArray(cw * ch * 4);
+    for (var y = 0; y < ch; y++) {
+      var so = ((sy + y) * w + sx) * 4;
+      out.set(data.subarray(so, so + cw * 4), y * cw * 4);
+    }
+    return out;
+  }
+
+  function trimBounds(data, w, h, thr, margin) {
+    var minX = w, minY = h, maxX = -1, maxY = -1, x, y, row;
+    for (y = 0; y < h; y++) {
+      row = y * w;
+      for (x = 0; x < w; x++) {
+        if (data[(row + x) * 4 + 3] > thr) {
+          if (x < minX) minX = x;
+          if (x > maxX) maxX = x;
+          if (y < minY) minY = y;
+          if (y > maxY) maxY = y;
+        }
+      }
+    }
+    if (maxX < 0) return null;
+    minX = Math.max(0, minX - margin);
+    minY = Math.max(0, minY - margin);
+    maxX = Math.min(w - 1, maxX + margin);
+    maxY = Math.min(h - 1, maxY + margin);
+    return { x: minX, y: minY, w: maxX - minX + 1, h: maxY - minY + 1 };
+  }
+
+  /* ---------------- PNG 인코더 (스트레이트 알파 보존) ----------------
+     캔버스 toBlob은 완전 투명 픽셀의 RGB(평균 잉크색)를 버리므로
+     CompressionStream으로 직접 인코딩. 미지원 브라우저는 캔버스 폴백. */
+  var CRC_TABLE = (function () {
+    var t = new Int32Array(256), c, m, kk;
+    for (m = 0; m < 256; m++) {
+      c = m;
+      for (kk = 0; kk < 8; kk++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+      t[m] = c;
+    }
+    return t;
+  })();
+
+  function crc32(bytes, start, len) {
+    var c = -1, i;
+    for (i = start; i < start + len; i++) c = CRC_TABLE[(c ^ bytes[i]) & 255] ^ (c >>> 8);
+    return (c ^ -1) >>> 0;
+  }
+
+  function pngChunk(type, data) {
+    var out = new Uint8Array(12 + data.length);
+    var dv = new DataView(out.buffer);
+    dv.setUint32(0, data.length);
+    for (var i = 0; i < 4; i++) out[4 + i] = type.charCodeAt(i);
+    out.set(data, 8);
+    dv.setUint32(8 + data.length, crc32(out, 4, 4 + data.length));
+    return out;
+  }
+
+  function encodePng(rgba, w, h) {
+    return new Promise(function (resolve, reject) {
+      if (typeof CompressionStream === 'undefined') { reject(new Error('nocs')); return; }
+      var stride = w * 4;
+      var raw = new Uint8Array((stride + 1) * h);
+      var pos = 0, y, x, o;
+      for (y = 0; y < h; y++) {
+        raw[pos++] = 2; // Up 필터
+        o = y * stride;
+        if (y === 0) {
+          for (x = 0; x < stride; x++) raw[pos++] = rgba[o + x];
+        } else {
+          for (x = 0; x < stride; x++) raw[pos++] = (rgba[o + x] - rgba[o - stride + x]) & 255;
+        }
+      }
+      var stream = new Blob([raw]).stream().pipeThrough(new CompressionStream('deflate'));
+      new Response(stream).arrayBuffer().then(function (buf) {
+        var ihdr = new Uint8Array(13);
+        var dv = new DataView(ihdr.buffer);
+        dv.setUint32(0, w);
+        dv.setUint32(4, h);
+        ihdr[8] = 8;  // bit depth
+        ihdr[9] = 6;  // color type: RGBA
+        var sig = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]);
+        resolve(new Blob(
+          [sig, pngChunk('IHDR', ihdr), pngChunk('IDAT', new Uint8Array(buf)), pngChunk('IEND', new Uint8Array(0))],
+          { type: 'image/png' }
+        ));
+      }).catch(reject);
+    });
+  }
+
+  /* ---------------- 다운로드 (원본 해상도 전체 파이프라인) ---------------- */
+
+  // 출력 파일명 규칙: 원본명(누끼).png / PDF 다중 페이지는 원본명 p3(누끼).png
+  function outputNameFor(e, page) {
+    var tag = (e.kind === 'pdf' && e.numPages > 1 && page) ? ' p' + page : '';
+    return e.baseName + tag + '(누끼).png';
+  }
+
+  function uniqueName(name, used) {
+    var base = name.replace(/\.png$/, ''), cand = name, c = 2;
+    while (used[cand]) { cand = base + ' ' + c + '.png'; c++; }
+    used[cand] = true;
+    return cand;
+  }
+
+  // 캔버스 하나를 원본 해상도로 처리 (선택 영역·자동 여백 포함)
+  function processCanvasFull(canvas, s) {
+    var prep = prepare(canvas);
+    var rgba = applyPipeline(prep, +strengthEl.value, +softnessEl.value);
+    var W = prep.w, H = prep.h;
+    if (s) {
+      var sx = Math.min(W - 1, Math.max(0, Math.round(s.x0 * W)));
+      var sy = Math.min(H - 1, Math.max(0, Math.round(s.y0 * H)));
+      var cw = Math.max(1, Math.min(W - sx, Math.round((s.x1 - s.x0) * W)));
+      var ch = Math.max(1, Math.min(H - sy, Math.round((s.y1 - s.y0) * H)));
+      rgba = cropRgba(rgba, W, H, sx, sy, cw, ch);
+      W = cw; H = ch;
+    }
+    if (autotrimEl.checked) {
+      var b = trimBounds(rgba, W, H, 15, TRIM_MARGIN); // 0.06*255 ≈ 15
+      if (b) {
+        rgba = cropRgba(rgba, W, H, b.x, b.y, b.w, b.h);
+        W = b.w; H = b.h;
+      }
+    }
+    return { rgba: rgba, W: W, H: H };
+  }
+
+  function pngBlobFor(r) {
+    return encodePng(r.rgba, r.W, r.H).catch(function () {
+      // 폴백: 캔버스 인코딩 (구형 브라우저)
+      return new Promise(function (resolve, reject) {
+        var c = document.createElement('canvas');
+        c.width = r.W; c.height = r.H;
+        c.getContext('2d').putImageData(new ImageData(r.rgba, r.W, r.H), 0, 0);
+        c.toBlob(function (b) {
+          if (b) resolve(b); else reject(new Error('png'));
+        }, 'image/png');
+      });
+    });
+  }
+
+  function saveBlob(blob, name) {
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 5000);
+  }
+
+  function setBusy(busy) {
+    downloadBtn.disabled = busy;
+    saveAllBtn.disabled = busy;
+  }
+
+  downloadBtn.addEventListener('click', function () {
+    var e = files[currentIndex];
+    if (!e) return;
+    var page = e.kind === 'pdf' ? e.pdfPage : null;
+    var outName = outputNameFor(e, page);
+    var origLabel = downloadBtn.textContent;
+    setBusy(true);
+    downloadBtn.textContent = '처리 중…';
+    setStatus('원본 해상도(' + e.sourceCanvas.width + '×' + e.sourceCanvas.height + 'px)로 처리하는 중… 큰 사진은 몇 초 걸릴 수 있어요');
+    setTimeout(function () {
+      var finish = function (msg, isErr) {
+        downloadBtn.textContent = origLabel;
+        setBusy(false);
+        setStatus(msg, isErr);
+      };
+      try {
+        var r = processCanvasFull(e.sourceCanvas, getSel(e));
+        pngBlobFor(r).then(function (blob) {
+          saveBlob(blob, outName);
+          finish('저장 완료! ' + outName + ' (' + r.W + '×' + r.H + 'px 투명 PNG)');
+        }).catch(function () {
+          finish('PNG 생성에 실패했어요.', true);
+        });
+      } catch (err) {
+        finish('처리 중 오류가 났어요: ' + errMsg(err), true);
+      }
+    }, 30);
+  });
+
+  /* ---- 전체 저장: 모든 파일의 (이미지 + PDF 체크된 페이지)를 원본 해상도로
+          처리해 개별 다운로드 순차 실행(약 300ms 간격) ---- */
+  saveAllBtn.addEventListener('click', function () {
+    var items = saveItems();
+    if (!items.length) return;
+    setBusy(true);
+    batchHint.hidden = false; // "여러 파일 다운로드 허용" 안내
+    runBatch(saveAllBtn, items);
+  });
+
+  function runBatch(btn, items) {
+    var origLabel = btn.textContent;
+    var used = {}, idx = 0, saved = 0;
+    var finish = function (msg, isErr) {
+      btn.textContent = origLabel;
+      batchHint.hidden = true;
+      setBusy(false);
+      updateSaveAllBtn();
+      setStatus(msg, isErr);
+    };
+    var step = function () {
+      if (idx >= items.length) {
+        finish('전체 저장 완료! ' + saved + '장을 다운로드했어요 — 다운로드 폴더를 확인하세요');
+        return;
+      }
+      var it = items[idx], e = it.e;
+      var itemLabel = e.name + (it.page ? ' p' + it.page : '');
+      btn.textContent = '처리 중… ' + (idx + 1) + '/' + items.length;
+      setStatus('[' + (idx + 1) + '/' + items.length + '] ' + itemLabel + ' — 원본 해상도로 처리하는 중…');
+      // 캔버스 확보: 이미지는 그대로, PDF는 해당 페이지 (캐시 또는 렌더)
+      var canvasPromise = e.kind === 'pdf'
+        ? getPageCanvas(e, it.page)
+        : Promise.resolve(e.sourceCanvas);
+      canvasPromise.then(function (canvas) {
+        return new Promise(function (res, rej) {
+          setTimeout(function () { // UI 갱신 틈
+            try {
+              var s = e.kind === 'pdf' ? (e.selByPage[it.page] || null) : e.sel;
+              var r = processCanvasFull(canvas, s);
+              var name = uniqueName(outputNameFor(e, it.page), used);
+              pngBlobFor(r).then(function (blob) {
+                saveBlob(blob, name);
+                saved++;
+                res();
+              }).catch(rej);
+            } catch (err) { rej(err); }
+          }, 30);
+        });
+      }).then(function () {
+        // 브라우저가 연속 다운로드를 놓치지 않도록 간격을 둠
+        return new Promise(function (res) { setTimeout(res, 300); });
+      }).then(function () {
+        idx++;
+        step();
+      }).catch(function (err) {
+        finish('저장 중 오류가 났어요: ' + errMsg(err), true);
+      });
+    };
+    step();
+  }
+
+  /* (자동 테스트용) 상태 훅 — 동작에는 영향 없음 */
+  window.__nukki = {
+    get sel() { return getSel(files[currentIndex]); },
+    get zoom() { return zoomScale; },
+    get fileCount() { return files.length; },
+    get pdfReady() { var e = files[currentIndex]; return !!e && !pdfRendering; },
+    get pdfPage() { var e = files[currentIndex]; return e && e.kind === 'pdf' ? e.pdfPage : null; },
+    get checkedPages() { var e = files[currentIndex]; return e && e.kind === 'pdf' ? checkedPageList(e) : null; },
+    get saveCount() { return saveItems().length; },
+    previewMax: PREVIEW_MAX,
+    // 품질 게이트용: 캔버스를 실제 파이프라인 그대로 처리해 결과·상수를 반환
+    // (강도/부드러움 생략 시 현재 슬라이더 값 사용 — 기본 100/100)
+    processCanvas: function (canvas, strength, softness) {
+      var s = strength === undefined ? +strengthEl.value : strength;
+      var f = softness === undefined ? +softnessEl.value : softness;
+      var prep = prepare(canvas);
+      var th = thresholds(prep, s, f);
+      return {
+        rgba: applyPipeline(prep, s, f), w: prep.w, h: prep.h,
+        noise: prep.noise, peak: prep.peak, lo: th.lo, hi: th.hi
+      };
+    }
+  };
+
+  /* ---------------- 입력: 클릭/드래그&드롭/붙여넣기 (다중) ---------------- */
+  dropZone.addEventListener('click', function () { fileInput.click(); });
+  openBtn.addEventListener('click', function () { fileInput.click(); });
+
+  fileInput.addEventListener('change', function () {
+    if (fileInput.files && fileInput.files.length) handleFiles(fileInput.files);
+    fileInput.value = ''; // 같은 파일 재선택 허용
+  });
+
+  ['dragenter', 'dragover'].forEach(function (ev) {
+    document.addEventListener(ev, function (e) {
+      e.preventDefault();
+      dropZone.classList.add('dragover');
+    });
+  });
+  ['dragleave', 'drop'].forEach(function (ev) {
+    document.addEventListener(ev, function (e) {
+      e.preventDefault();
+      dropZone.classList.remove('dragover');
+    });
+  });
+  document.addEventListener('drop', function (e) {
+    var list = e.dataTransfer && e.dataTransfer.files;
+    if (list && list.length) handleFiles(list);
+  });
+
+  document.addEventListener('paste', function (e) {
+    var items = e.clipboardData && e.clipboardData.items;
+    if (!items) return;
+    var got = [];
+    for (var i = 0; i < items.length; i++) {
+      if (items[i].kind === 'file') {
+        var f = items[i].getAsFile();
+        if (f && (f.type.indexOf('image/') === 0 || f.type === 'application/pdf')) got.push(f);
+      }
+    }
+    if (got.length) {
+      e.preventDefault();
+      handleFiles(got);
+    }
+  });
+})();
+</script>
+</body>
+</html>
