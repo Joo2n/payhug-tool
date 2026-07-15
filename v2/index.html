@@ -57,6 +57,12 @@
   .ctrl .val { width: 28px; text-align: right; color: #6b7280; font-variant-numeric: tabular-nums; }
   .ctrl input[type=checkbox] { width: 16px; height: 16px; accent-color: #4f63f0; }
 
+  /* ---- 모드 선택 (배경만 제거 / 서명만) ---- */
+  .seg { display: inline-flex; border: 1px solid #d4d9e3; border-radius: 9px; overflow: hidden; }
+  .seg button { border: none !important; border-radius: 0 !important; padding: 7px 13px; }
+  .seg button + button { border-left: 1px solid #d4d9e3 !important; }
+  .seg button.active { background: #4f63f0 !important; color: #fff; }
+
   button {
     font: inherit;
     font-size: 13px;
@@ -178,6 +184,13 @@
 
     <div class="toolbar">
       <div class="ctrl">
+        <label>모드</label>
+        <div class="seg">
+          <button id="modeBgBtn" type="button" class="active" title="바깥 배경만 지우고 서명·도장 안쪽 종이는 그대로 둬요">배경만 제거</button>
+          <button id="modeInkBtn" type="button" title="잉크만 남기고 종이는 전부 투명 — 문서 위에 얹을 때 좋아요">서명만</button>
+        </div>
+      </div>
+      <div class="ctrl">
         <label for="strength">강도</label>
         <input type="range" id="strength" min="0" max="100" value="100">
         <span class="val" id="strengthVal">100</span>
@@ -237,7 +250,8 @@
       compareBtn = $('compareBtn'), clearSelBtn = $('clearSelBtn'),
       openBtn = $('openBtn'), downloadBtn = $('downloadBtn'),
       pdfNav = $('pdfNav'), prevPageBtn = $('prevPageBtn'),
-      nextPageBtn = $('nextPageBtn'), pageInfo = $('pageInfo');
+      nextPageBtn = $('nextPageBtn'), pageInfo = $('pageInfo'),
+      modeBgBtn = $('modeBgBtn'), modeInkBtn = $('modeInkBtn');
 
   var PREVIEW_MAX = 900;     // 미리보기 처리 해상도(긴 변) — 다운로드는 항상 원본 해상도
   var PDF_TARGET = 2400;     // PDF 렌더 해상도(긴 변)
@@ -247,6 +261,7 @@
   var previewPrep = null;    // 미리보기용 사전 계산(배경맵·잉크맵·적응 통계)
   var pdfDoc = null, pdfPage = 1, pdfRendering = false;
   var sel = null;            // 선택 영역 {x0,y0,x1,y1} (0~1 정규화)
+  var mode = 'bg';           // 'bg' = 배경만 제거(기본, 안쪽 종이 유지) / 'ink' = 서명만(잉크만)
   var showOriginal = false;
   var rafId = 0;
   var srcBaseName = '서명';  // 저장 파일명용 원본 이름(확장자 제외)
@@ -505,6 +520,7 @@
     return { k: k, r: r };
   }
   var K06 = makeKernel(0.6);
+  var K11 = makeKernel(1.1); // 배경만 제거 모드의 경계 페더용
 
   function gaussBlur(src, dst, tmp, w, h, kern) {
     var k = kern.k, r = kern.r, x, y, t, s, row, xx, yy;
@@ -825,6 +841,88 @@
     return out;
   }
 
+  /* ================================================================
+     배경만 제거 모드 (기본): 서명·도장을 하나의 오브젝트로 보고
+     바깥 배경만 투명 처리, 안쪽 종이(획 사이·도장 내부)는 그대로 둠.
+      1) 서명만 파이프라인의 잉크 알파(잡티 제거 완료 상태)를 시드 마스크로
+      2) 팽창(r ≈ 긴변/400)으로 획 사이 틈을 메움
+      3) 이미지 테두리에서 flood fill → "바깥과 이어진 배경"만 식별
+         (오브젝트 안쪽 구멍은 바깥과 안 이어지므로 그대로 남음)
+      4) 반전 팽창(=침식)으로 경계를 잉크선 근처까지 되돌림 (구멍은 유지)
+      5) 경계 페더(σ1.1) — RGB는 원본 그대로, 알파 = 오브젝트 마스크
+     ================================================================ */
+  function applyObjectPipeline(prep, strengthSlider, softSlider) {
+    var w = prep.w, h = prep.h, n = w * h;
+    var src = prep.src;
+    var inkRgba = applyPipeline(prep, strengthSlider, softSlider);
+    var i, p;
+
+    // 1) 잉크 마스크 (255 = 잉크) — 서명만 파이프라인의 최종 알파 기준
+    var mask = new Uint8Array(n);
+    for (i = 0, p = 3; i < n; i++, p += 4) mask[i] = inkRgba[p] > 15 ? 255 : 0;
+
+    // 2) 팽창
+    var r = Math.max(2, Math.round(Math.max(w, h) / 400));
+    var L = Math.max(w, h);
+    var tmp8 = new Uint8Array(n);
+    var lineIn = new Uint8Array(L), lineOut = new Uint8Array(L);
+    var dq = new Int32Array(L);
+    maxFilter2D(mask, w, h, r, tmp8, lineIn, lineOut, dq);
+
+    // 3) 테두리에서 flood fill (4방향 BFS) → bgm=1 이 바깥 배경
+    var bgm = new Uint8Array(n);
+    var queue = new Int32Array(n);
+    var qh = 0, qt = 0, x, y, idx;
+    for (x = 0; x < w; x++) {
+      idx = x;
+      if (!bgm[idx] && !mask[idx]) { bgm[idx] = 1; queue[qt++] = idx; }
+      idx = (h - 1) * w + x;
+      if (!bgm[idx] && !mask[idx]) { bgm[idx] = 1; queue[qt++] = idx; }
+    }
+    for (y = 0; y < h; y++) {
+      idx = y * w;
+      if (!bgm[idx] && !mask[idx]) { bgm[idx] = 1; queue[qt++] = idx; }
+      idx = y * w + w - 1;
+      if (!bgm[idx] && !mask[idx]) { bgm[idx] = 1; queue[qt++] = idx; }
+    }
+    var nb;
+    while (qh < qt) {
+      idx = queue[qh++];
+      x = idx % w; y = (idx / w) | 0;
+      if (x > 0) { nb = idx - 1; if (!bgm[nb] && !mask[nb]) { bgm[nb] = 1; queue[qt++] = nb; } }
+      if (x < w - 1) { nb = idx + 1; if (!bgm[nb] && !mask[nb]) { bgm[nb] = 1; queue[qt++] = nb; } }
+      if (y > 0) { nb = idx - w; if (!bgm[nb] && !mask[nb]) { bgm[nb] = 1; queue[qt++] = nb; } }
+      if (y < h - 1) { nb = idx + w; if (!bgm[nb] && !mask[nb]) { bgm[nb] = 1; queue[qt++] = nb; } }
+    }
+
+    // 4) 오브젝트 = 바깥 배경이 아닌 곳 → 반전 팽창(=침식)으로 경계 복원
+    for (i = 0; i < n; i++) mask[i] = bgm[i] ? 255 : 0; // 반전 상태로 바로 생성
+    maxFilter2D(mask, w, h, r, tmp8, lineIn, lineOut, dq);
+    for (i = 0; i < n; i++) mask[i] = 255 - mask[i];
+
+    // 5) 경계 페더 후 합성 — 마스크 밖의 옅은 잉크(alpha)도 보존
+    var fm = new Float32Array(n), f1 = new Float32Array(n), f2 = new Float32Array(n);
+    for (i = 0; i < n; i++) fm[i] = mask[i] / 255;
+    gaussBlur(fm, f1, f2, w, h, K11);
+    var out = new Uint8ClampedArray(n * 4);
+    var a, ia;
+    for (i = 0, p = 0; i < n; i++, p += 4) {
+      a = f1[i];
+      ia = inkRgba[p + 3] / 255;
+      if (ia > a) a = ia;
+      out[p] = src[p]; out[p + 1] = src[p + 1]; out[p + 2] = src[p + 2];
+      out[p + 3] = (a * 255 + 0.5) | 0;
+    }
+    return out;
+  }
+
+  /* --- 현재 모드에 맞는 파이프라인 실행 --- */
+  function runPipeline(prep, strengthSlider, softSlider) {
+    return mode === 'bg'
+      ? applyObjectPipeline(prep, strengthSlider, softSlider)
+      : applyPipeline(prep, strengthSlider, softSlider);
+  }
+
   /* ---------------- 미리보기 렌더 ---------------- */
   function renderPreview() {
     if (!previewPrep) return;
@@ -839,10 +937,23 @@
       }
       ctx.putImageData(img, 0, 0);
     } else {
-      var rgba = applyPipeline(previewPrep, +strengthEl.value, +softnessEl.value);
+      var rgba = runPipeline(previewPrep, +strengthEl.value, +softnessEl.value);
       ctx.putImageData(new ImageData(rgba, w, h), 0, 0);
     }
   }
+
+  function setMode(m) {
+    if (mode === m) return;
+    mode = m;
+    modeBgBtn.classList.toggle('active', m === 'bg');
+    modeInkBtn.classList.toggle('active', m === 'ink');
+    renderPreview();
+    setStatus(m === 'bg'
+      ? '배경만 제거 모드 — 서명·도장 안쪽 종이는 그대로 두고 바깥 배경만 지워요'
+      : '서명만 모드 — 잉크만 남기고 종이는 전부 투명해져요. 문서 위에 얹을 때 좋아요');
+  }
+  modeBgBtn.addEventListener('click', function () { setMode('bg'); });
+  modeInkBtn.addEventListener('click', function () { setMode('ink'); });
 
   function scheduleRender() {
     if (rafId) return;
@@ -1152,10 +1263,11 @@
 
   /* ---------------- 다운로드 (원본 해상도 전체 파이프라인) ---------------- */
 
-  // 출력 파일명 규칙: 원본명(누끼).png / PDF 다중 페이지는 원본명 p3(누끼).png
+  // 출력 파일명 규칙: 원본명(누끼).png — 서명만 모드는 원본명(서명).png
+  //                   PDF 다중 페이지는 원본명 p3(누끼).png
   function outputName() {
     var page = (pdfDoc && pdfDoc.numPages > 1) ? ' p' + pdfPage : '';
-    return srcBaseName + page + '(누끼).png';
+    return srcBaseName + page + (mode === 'bg' ? '(누끼)' : '(서명)') + '.png';
   }
 
   downloadBtn.addEventListener('click', function () {
@@ -1172,7 +1284,7 @@
       };
       try {
         var prep = prepare(sourceCanvas);
-        var rgba = applyPipeline(prep, +strengthEl.value, +softnessEl.value);
+        var rgba = runPipeline(prep, +strengthEl.value, +softnessEl.value);
         var W = prep.w, H = prep.h;
 
         if (sel) {
@@ -1225,13 +1337,17 @@
     get zoom() { return zoomScale; },
     get baseName() { return srcBaseName; },
     get outputName() { return sourceCanvas ? outputName() : null; },
+    get mode() { return mode; },
+    setMode: setMode,
     // 품질 게이트용: 캔버스를 실제 파이프라인 그대로 처리해 결과를 반환
-    processCanvas: function (canvas, strength, softness) {
+    // (pipelineMode 생략 시 'ink' = 기존 서명만 파이프라인 — 파이썬 동일성 게이트 호환)
+    processCanvas: function (canvas, strength, softness, pipelineMode) {
       var prep = prepare(canvas);
+      var s = strength === undefined ? +strengthEl.value : strength;
+      var f = softness === undefined ? +softnessEl.value : softness;
+      var m = pipelineMode === undefined ? 'ink' : pipelineMode;
       return {
-        rgba: applyPipeline(prep,
-          strength === undefined ? +strengthEl.value : strength,
-          softness === undefined ? +softnessEl.value : softness),
+        rgba: m === 'bg' ? applyObjectPipeline(prep, s, f) : applyPipeline(prep, s, f),
         w: prep.w, h: prep.h, noise: prep.noise, peak: prep.peak
       };
     }
