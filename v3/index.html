@@ -351,7 +351,8 @@
 
   var PREVIEW_MAX = 1600;    // 미리보기 처리 해상도(긴 변) — 다운로드는 항상 원본 해상도
                              // (900이면 큰 계약서 속 작은 서명이 1px 미만으로 뭉개져 안 보임)
-  var PDF_TARGET = 2400;     // PDF 렌더 해상도(긴 변)
+  var PDF_TARGET = 3500;     // PDF 렌더 해상도(긴 변) — A4 300dpi급 (2400이면 스캔 원본보다
+                             // 낮아져 도장이 뭉개짐: 300dpi 스캔 PDF의 도장 240px → 165px)
   var TRIM_MARGIN = 16;      // 자동 여백 제거 시 남길 여백(px)
 
   /* ---------------- 다중 파일 상태 ----------------
@@ -904,6 +905,27 @@
     }
   }
 
+  /* --- 박스 블러(누적합 O(n), 반지름 무관) ×3회 ≈ 가우시안 — 마스크 스무딩용 --- */
+  function boxBlurLine(src, dst, off, stride, cnt, r) {
+    var win = 2 * r + 1, s = 0, i, j;
+    for (i = -r; i <= r; i++) {
+      j = i < 0 ? 0 : (i >= cnt ? cnt - 1 : i);
+      s += src[off + j * stride];
+    }
+    for (i = 0; i < cnt; i++) {
+      dst[off + i * stride] = s / win;
+      j = i + r + 1; if (j >= cnt) j = cnt - 1;
+      s += src[off + j * stride];
+      j = i - r; if (j < 0) j = 0;
+      s -= src[off + j * stride];
+    }
+  }
+  function boxBlur2D(src, dst, tmp, w, h, r) {
+    var x, y;
+    for (y = 0; y < h; y++) boxBlurLine(src, tmp, y * w, 1, w, r);
+    for (x = 0; x < w; x++) boxBlurLine(tmp, dst, x, w, h, r);
+  }
+
   /* --- 3×3 미디언 (9원소 정렬 네트워크, Devillard opt_med9) --- */
   function med9(a0, a1, a2, a3, a4, a5, a6, a7, a8) {
     var t;
@@ -1263,9 +1285,19 @@
     maxFilter2D(mask, w, h, r, tmp8, lineIn, lineOut, dq);
     for (i = 0; i < n; i++) mask[i] = 255 - mask[i];
 
-    // 5) 경계 페더 후 합성 — 마스크 밖의 옅은 잉크(alpha)도 보존
+    // 4.5) 윤곽 스무딩: 마스크를 강하게 블러(박스 3회 ≈ 가우시안 σ≈2r) 후
+    //      0.5 재이진화 — 잉크 요철·사각 팽창 자국을 매끈한 곡선으로.
+    //      얇은 획(hairline)은 블러 후 0.5에 못 미쳐 마스크에서 빠질 수 있지만
+    //      획 자체는 5)의 max(마스크, 잉크 알파) 합성으로 항상 보존된다
     var fm = new Float32Array(n), f1 = new Float32Array(n), f2 = new Float32Array(n);
     for (i = 0; i < n; i++) fm[i] = mask[i] / 255;
+    var rb = 2 * r;
+    boxBlur2D(fm, f1, f2, w, h, rb);
+    boxBlur2D(f1, fm, f2, w, h, rb);
+    boxBlur2D(fm, f1, f2, w, h, rb);
+    for (i = 0; i < n; i++) fm[i] = f1[i] >= 0.5 ? 1 : 0;
+
+    // 5) 경계 페더 후 합성 — 마스크 밖의 옅은 잉크(alpha)도 보존
     gaussBlur(fm, f1, f2, w, h, K11);
     var out = new Uint8ClampedArray(n * 4);
     var a, ia;
