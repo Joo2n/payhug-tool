@@ -1,0 +1,1038 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>한글 파일명 고치기</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard",
+                 "Malgun Gothic", "Segoe UI", sans-serif;
+    background: #f4f5f7;
+    color: #23262b;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  .app { max-width: 980px; margin: 0 auto; padding: 28px 20px 60px; }
+  header { text-align: center; margin-bottom: 22px; }
+  header h1 { font-size: 26px; font-weight: 700; letter-spacing: -0.5px; }
+  header p.hint { color: #6b7280; font-size: 14px; margin-top: 6px; }
+
+  /* ---- 드롭존 ---- */
+  .dropzone {
+    border: 2px dashed #c3c9d4;
+    border-radius: 16px;
+    background: #fff;
+    padding: 56px 24px 44px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color .15s, background .15s;
+  }
+  .dropzone:hover { border-color: #7c8cf8; }
+  .dropzone.dragover { border-color: #4f63f0; background: #eef1ff; }
+  .dropzone .big { font-size: 44px; margin-bottom: 12px; }
+  .dropzone .main-text { font-size: 17px; font-weight: 600; margin-bottom: 6px; }
+  .dropzone .sub-text { font-size: 13px; color: #8a919e; }
+  .drop-btns { margin-top: 20px; display: flex; gap: 10px; justify-content: center; }
+
+  /* ---- 작업 화면 ---- */
+  #workspace { margin-top: 4px; }
+  .toolbar {
+    background: #fff;
+    border: 1px solid #e4e7ee;
+    border-radius: 14px;
+    padding: 14px 18px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px 22px;
+    align-items: center;
+    margin-bottom: 14px;
+  }
+  .ctrl { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+  .ctrl label { font-weight: 600; color: #444a54; white-space: nowrap; }
+  .ctrl input[type=checkbox] { width: 16px; height: 16px; accent-color: #4f63f0; }
+  #countInfo { font-size: 13px; font-weight: 700; color: #444a54; }
+  #emptyDirHint { font-size: 12px; color: #8a919e; }
+
+  button {
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    border: 1px solid #d4d9e3;
+    background: #fff;
+    color: #33383f;
+    border-radius: 9px;
+    padding: 8px 14px;
+    cursor: pointer;
+    transition: background .12s, border-color .12s;
+  }
+  button:hover:not(:disabled) { background: #f0f2f7; }
+  button:disabled { opacity: .45; cursor: default; }
+  button.primary {
+    background: #4f63f0; border-color: #4f63f0; color: #fff;
+    padding: 9px 20px; font-size: 14px;
+  }
+  button.primary:hover:not(:disabled) { background: #3d51e0; }
+  .spacer { flex: 1; }
+
+  #batchHint {
+    font-size: 12px;
+    color: #8a919e;
+    margin: -6px 2px 12px;
+  }
+
+  /* ---- 안내/경고 박스 ---- */
+  #notice {
+    background: #eaf7ec; border: 1px solid #bfe5c8; color: #2f7a3d;
+    border-radius: 14px; padding: 12px 18px; margin-bottom: 14px;
+    font-size: 13.5px; font-weight: 600;
+  }
+  #warnBox {
+    background: #fff7e8; border: 1px solid #f2d9a8; color: #9a6b12;
+    border-radius: 14px; padding: 12px 18px; margin-bottom: 14px;
+    font-size: 13px; font-weight: 600;
+  }
+
+  /* ---- 진행률 ---- */
+  #progressWrap {
+    height: 8px; background: #e4e7ee; border-radius: 999px;
+    overflow: hidden; margin-bottom: 12px;
+  }
+  #progressBar {
+    height: 100%; width: 0%; background: #4f63f0;
+    border-radius: 999px; transition: width .15s;
+  }
+
+  /* ---- 진단 표 ---- */
+  .table-panel {
+    background: #fff;
+    border: 1px solid #e4e7ee;
+    border-radius: 14px;
+    overflow-x: auto;
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th {
+    text-align: left; color: #8a919e; font-size: 12px; font-weight: 700;
+    padding: 10px 14px; border-bottom: 1px solid #e4e7ee; white-space: nowrap;
+  }
+  td { padding: 8px 14px; border-bottom: 1px solid #f0f2f7; word-break: break-all; vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  td.arrow { color: #c3c9d4; white-space: nowrap; }
+  td.badge-cell { white-space: nowrap; }
+  .name-broken { color: #c02020; background: #fdecec; border-radius: 4px; padding: 1px 4px; }
+  .name-same { color: #8a919e; }
+  .zip-head td {
+    background: #f7f8fb; font-weight: 700; color: #33383f;
+    border-top: 1px solid #e4e7ee;
+  }
+  .zip-error td { color: #c02020; font-weight: 600; background: #fdf3f3; }
+  .badge {
+    display: inline-block; font-size: 11.5px; font-weight: 700;
+    border-radius: 999px; padding: 2px 9px; white-space: nowrap;
+  }
+  .badge.ok   { color: #2f7a3d; background: #eaf7ec; border: 1px solid #bfe5c8; }
+  .badge.bad  { color: #c02020; background: #fdecec; border: 1px solid #f2c4c4; }
+  .badge.warn { color: #9a6b12; background: #fff7e8; border: 1px solid #f2d9a8; }
+  .enc-badge {
+    display: inline-block; font-size: 11.5px; font-weight: 700;
+    color: #3345c8; background: #eef1ff; border: 1px solid #aab6f7;
+    border-radius: 999px; padding: 2px 9px; margin-left: 8px; white-space: nowrap;
+  }
+
+  .tip-box {
+    background: #eef1ff; border: 1px solid #aab6f7; color: #3345c8;
+    border-radius: 14px; padding: 12px 18px; margin-top: 14px; font-size: 13px;
+  }
+
+  #status {
+    margin-top: 12px;
+    font-size: 13px;
+    color: #4b5563;
+    text-align: center;
+    min-height: 20px;
+  }
+  #status.error { color: #d33; font-weight: 600; }
+
+  footer { text-align: center; margin-top: 26px; font-size: 12px; color: #a2a8b3; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <a href="../" style="float:right;font-size:13px;font-weight:600;color:#4f63f0;text-decoration:none;border:1px solid #d4d9e3;background:#fff;border-radius:9px;padding:8px 14px;margin-left:12px">🏠 홈</a>
+    <h1>🔤 한글 파일명 고치기</h1>
+    <p class="hint">맥에서 만든 파일을 Jira·윈도우로 보낼 때 한글이 ㅎㅏㄴㄱㅡㄹ처럼 깨지는 것(자소분리)을 고쳐 드려요</p>
+  </header>
+
+  <!-- 파일 입력 -->
+  <input type="file" id="fileInput" multiple hidden>
+  <input type="file" id="dirInput" webkitdirectory directory hidden>
+
+  <div id="drop" class="dropzone">
+    <div class="big">🔤</div>
+    <div class="main-text">여기에 파일·폴더·zip을 끌어다 놓거나, 클릭해서 선택하세요</div>
+    <div class="sub-text">여러 파일 · 폴더 통째 · .zip 모두 알아서 판별해요 &nbsp;·&nbsp; 복사한 파일은 Cmd+V로 붙여넣기도 돼요</div>
+    <div class="drop-btns">
+      <button id="pickDirBtn" type="button">📁 폴더 선택</button>
+      <button id="pickFileBtn" type="button">파일 선택</button>
+    </div>
+  </div>
+
+  <div id="workspace" hidden>
+    <div class="toolbar">
+      <span id="countInfo"></span>
+      <div class="ctrl" id="compressCtrl">
+        <input type="checkbox" id="compressChk">
+        <label for="compressChk">용량 줄이기(느림)</label>
+      </div>
+      <span id="emptyDirHint" hidden>빈 폴더는 zip에 포함되지 않아요</span>
+      <div class="spacer"></div>
+      <button id="resetBtn" type="button">처음부터</button>
+      <button id="addBtn" type="button">＋ 파일 추가</button>
+      <button id="saveEachBtn" type="button">각각 저장</button>
+      <button id="saveZipBtn" type="button" class="primary">⬇ zip으로 묶어 저장</button>
+      <button id="saveFixedZipBtn" type="button" class="primary">⬇ 고친 zip 저장</button>
+      <button id="saveSingleBtn" type="button" class="primary">⬇ 고친 이름으로 저장</button>
+    </div>
+
+    <p id="batchHint" hidden>💡 브라우저가 "여러 파일 다운로드 허용"을 물어보면 [허용]을 눌러 주세요</p>
+    <div id="notice" hidden>✅ 이미 정상이에요 — 변환이 필요 없어요</div>
+    <div id="warnBox" hidden></div>
+    <div id="progressWrap" hidden><div id="progressBar"></div></div>
+
+    <div class="table-panel">
+      <table>
+        <thead>
+          <tr><th>현재 이름</th><th></th><th>고친 이름</th><th>상태</th></tr>
+        </thead>
+        <tbody id="diagBody"></tbody>
+      </table>
+    </div>
+
+    <p id="status"></p>
+
+    <div class="tip-box">💡 Jira에 올릴 때: 여기서 받은 파일을 첨부하면 윈도우 동료에게도 한글이 제대로 보여요. 폴더는 zip으로 받아져요 — 그대로 첨부하면 됩니다.</div>
+  </div>
+
+  <footer>모든 처리는 브라우저 안에서만 — 파일이 컴퓨터 밖으로 전송되지 않아요 · 외부 라이브러리 로딩에만 인터넷이 필요합니다</footer>
+</div>
+
+<script>
+'use strict';
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+
+  var fileInput = $('fileInput'), dirInput = $('dirInput'), dropZone = $('drop'),
+      workspace = $('workspace'), diagBody = $('diagBody'), statusEl = $('status'),
+      noticeEl = $('notice'), warnBox = $('warnBox'),
+      progressWrap = $('progressWrap'), progressBar = $('progressBar'),
+      countInfo = $('countInfo'), compressCtrl = $('compressCtrl'),
+      compressChk = $('compressChk'), emptyDirHint = $('emptyDirHint'),
+      batchHint = $('batchHint'),
+      pickDirBtn = $('pickDirBtn'), pickFileBtn = $('pickFileBtn'),
+      resetBtn = $('resetBtn'), addBtn = $('addBtn'),
+      saveEachBtn = $('saveEachBtn'), saveZipBtn = $('saveZipBtn'),
+      saveFixedZipBtn = $('saveFixedZipBtn'), saveSingleBtn = $('saveSingleBtn');
+
+  var SIZE_WARN = 300 * 1024 * 1024; // 300MB 초과 경고
+
+  /* ---------------- 상태 ----------------
+     fileItems[i] = { file, origPath(원본 그대로 — 맥 크롬은 NFD), fixedPath(NFC), broken }
+     zipJobs[i]   = { name, fixedZipName, u8, entries, encLabel, needsFix, encrypted, parseError }
+     zip entry    = { nameBytes, flags, method, csize, usize, lho, mtime,
+                      origName, fixedName, isDir, enc, status('ok'|'bad'|'warn'), statusText } */
+  var fileItems = [];
+  var zipJobs = [];
+  var busy = false;
+
+  /* ---------------- 상태 표시 ---------------- */
+  function setStatus(msg, isError) {
+    statusEl.textContent = msg || '';
+    statusEl.className = isError ? 'error' : '';
+  }
+
+  function errMsg(err) {
+    return err && err.message ? err.message : String(err);
+  }
+
+  function setProgress(done, total) {
+    if (total > 0 && done < total) {
+      progressWrap.hidden = false;
+      progressBar.style.width = Math.round(done / total * 100) + '%';
+    } else if (total > 0) {
+      progressBar.style.width = '100%';
+      setTimeout(function () { progressWrap.hidden = true; progressBar.style.width = '0%'; }, 600);
+    } else {
+      progressWrap.hidden = true;
+      progressBar.style.width = '0%';
+    }
+  }
+
+  /* ---------------- fflate (CDN lazy load) ---------------- */
+  var FFLATE_URL = 'https://cdn.jsdelivr.net/npm/fflate@0.8.3/umd/index.js';
+  var fflatePromise = null;
+
+  function loadFflate() {
+    if (window.fflate) return Promise.resolve(window.fflate);
+    if (fflatePromise) return fflatePromise;
+    fflatePromise = new Promise(function (resolve, reject) {
+      var s = document.createElement('script');
+      s.src = FFLATE_URL;
+      s.onload = function () { resolve(window.fflate); };
+      s.onerror = function () {
+        fflatePromise = null;
+        reject(new Error('offline'));
+      };
+      document.head.appendChild(s);
+    });
+    return fflatePromise;
+  }
+
+  function offlineMsg() {
+    return '압축 도구(외부 라이브러리)를 불러오지 못했어요 — 인터넷 연결을 확인한 뒤 다시 시도해 주세요';
+  }
+
+  /* ---------------- 이름 진단 ---------------- */
+  function fixName(name) {
+    return String(name || '').normalize('NFC');
+  }
+
+  function isBrokenName(name) {
+    return name !== fixName(name);
+  }
+
+  function hasNonAscii(name) {
+    for (var i = 0; i < name.length; i++) if (name.charCodeAt(i) > 127) return true;
+    return false;
+  }
+
+  /* ---------------- zip 파싱 (중앙 디렉터리 직접 해석) ----------------
+     fflate unzip만으로는 EFS(bit 11)·암호(bit 0) 플래그를 알 수 없어
+     중앙 디렉터리를 직접 읽는다. 파일명 바이트 → 인코딩 판별:
+     bit11 있으면 UTF-8 확정, 없으면 UTF-8(fatal) 시도 → 실패 시 EUC-KR 폴백 */
+  function readU16(b, o) { return b[o] | (b[o + 1] << 8); }
+  function readU32(b, o) { return (b[o] | (b[o + 1] << 8) | (b[o + 2] << 16) | (b[o + 3] << 24)) >>> 0; }
+
+  function dosToDate(dosDate, dosTime) {
+    if (!dosDate) return new Date();
+    return new Date(
+      ((dosDate >> 9) & 0x7f) + 1980, ((dosDate >> 5) & 0x0f) - 1, dosDate & 0x1f,
+      (dosTime >> 11) & 0x1f, (dosTime >> 5) & 0x3f, (dosTime & 0x1f) * 2);
+  }
+
+  var utf8Fatal = new TextDecoder('utf-8', { fatal: true });
+  var utf8Loose = new TextDecoder('utf-8');
+  var eucKr = null;
+  try { eucKr = new TextDecoder('euc-kr'); } catch (e) { /* 미지원 브라우저 */ }
+
+  function decodeEntryName(bytes, bit11) {
+    if (bit11) return { name: utf8Loose.decode(bytes), enc: 'utf8-efs' };
+    try { return { name: utf8Fatal.decode(bytes), enc: 'utf8' }; } catch (e) { /* 폴백 */ }
+    if (eucKr) {
+      try { return { name: eucKr.decode(bytes), enc: 'euckr' }; } catch (e2) { /* 폴백 */ }
+    }
+    var s = '';
+    for (var i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
+    return { name: s, enc: 'unknown' };
+  }
+
+  function parseZipEntries(u8) {
+    // EOCD(끝 레코드) 탐색: 시그니처 0x06054b50, 주석 최대 65535바이트
+    var i = u8.length - 22;
+    var min = Math.max(0, u8.length - 65557);
+    while (i >= min && readU32(u8, i) !== 0x06054b50) i--;
+    if (i < min || i < 0) throw new Error('zip 형식을 읽지 못했어요 (손상되었거나 zip 파일이 아니에요)');
+    var count = readU16(u8, i + 10);
+    var cdOff = readU32(u8, i + 16);
+    if (count === 0xffff || cdOff === 0xffffffff) {
+      throw new Error('zip64 형식(초대용량 zip)은 지원하지 않아요');
+    }
+    var entries = [], o = cdOff, k;
+    for (k = 0; k < count; k++) {
+      if (readU32(u8, o) !== 0x02014b50) throw new Error('zip 목차(중앙 디렉터리)가 손상됐어요');
+      var flags = readU16(u8, o + 8);
+      var method = readU16(u8, o + 10);
+      var dosTime = readU16(u8, o + 12);
+      var dosDate = readU16(u8, o + 14);
+      var csize = readU32(u8, o + 20);
+      var usize = readU32(u8, o + 24);
+      var nlen = readU16(u8, o + 28);
+      var elen = readU16(u8, o + 30);
+      var clen = readU16(u8, o + 32);
+      var lho = readU32(u8, o + 42);
+      var nameBytes = u8.slice(o + 46, o + 46 + nlen);
+      var dec = decodeEntryName(nameBytes, (flags & 0x800) !== 0);
+      var origName = dec.name;
+      var fixed = fixName(origName);
+      var isDir = origName.length > 0 && origName.charAt(origName.length - 1) === '/';
+      var status, statusText;
+      if (isBrokenName(origName)) {
+        status = 'bad'; statusText = '자소분리됨';
+      } else if (dec.enc === 'euckr') {
+        status = 'bad'; statusText = '인코딩 깨짐(EUC-KR)';
+      } else if (dec.enc === 'unknown' && hasNonAscii(origName)) {
+        status = 'warn'; statusText = '인코딩 불명';
+      } else if (dec.enc === 'utf8' && hasNonAscii(origName)) {
+        status = 'warn'; statusText = 'UTF-8 플래그 없음';
+      } else {
+        status = 'ok'; statusText = '정상';
+      }
+      entries.push({
+        nameBytes: nameBytes, flags: flags, method: method,
+        csize: csize, usize: usize, lho: lho,
+        mtime: dosToDate(dosDate, dosTime),
+        origName: origName, fixedName: fixed, isDir: isDir,
+        enc: dec.enc, status: status, statusText: statusText
+      });
+      o += 46 + nlen + elen + clen;
+    }
+    return entries;
+  }
+
+  function zipEncLabel(entries) {
+    var anyNonAscii = false, anyEuc = false, anyNoFlag = false, i, en;
+    for (i = 0; i < entries.length; i++) {
+      en = entries[i];
+      if (hasNonAscii(en.origName)) anyNonAscii = true;
+      if (en.enc === 'euckr') anyEuc = true;
+      if (en.enc === 'utf8' && hasNonAscii(en.origName)) anyNoFlag = true;
+    }
+    if (!anyNonAscii) return '영문/숫자만 — 인코딩 문제 없음';
+    if (anyEuc) return 'EUC-KR(윈도우 구형)';
+    if (anyNoFlag) return 'UTF-8(맥 표준)';
+    return 'UTF-8+플래그 정상';
+  }
+
+  function addZipU8(u8, name) {
+    var job = {
+      name: name || '문서.zip',
+      fixedZipName: fixName((name || '문서.zip').replace(/\.zip$/i, '')) + '_고침.zip',
+      u8: u8, entries: [], encLabel: '', needsFix: false,
+      encrypted: false, parseError: null
+    };
+    try {
+      job.entries = parseZipEntries(u8);
+      job.encLabel = zipEncLabel(job.entries);
+      for (var i = 0; i < job.entries.length; i++) {
+        if ((job.entries[i].flags & 1) !== 0) job.encrypted = true;
+        if (job.entries[i].status !== 'ok') job.needsFix = true;
+      }
+    } catch (err) {
+      job.parseError = errMsg(err);
+    }
+    zipJobs.push(job);
+    return job;
+  }
+
+  /* ---------------- zip 엔트리 데이터 추출 (내용 무수정) ---------------- */
+  function extractEntryData(u8, entry, fflate) {
+    var o = entry.lho;
+    if (readU32(u8, o) !== 0x04034b50) throw new Error('zip 항목 위치가 손상됐어요: ' + entry.origName);
+    var nlen = readU16(u8, o + 26);
+    var elen = readU16(u8, o + 28);
+    var start = o + 30 + nlen + elen;
+    var comp = u8.subarray(start, start + entry.csize);
+    if (entry.method === 0) return comp;
+    if (entry.method === 8) return fflate.inflateSync(comp, { out: new Uint8Array(entry.usize) });
+    throw new Error('지원하지 않는 압축 방식(method ' + entry.method + ')이에요: ' + entry.origName);
+  }
+
+  /* ---------------- 이름 중복 방지 ---------------- */
+  function uniquePath(p, used) {
+    if (!used[p]) { used[p] = true; return p; }
+    var isDir = p.charAt(p.length - 1) === '/';
+    var body = isDir ? p.slice(0, -1) : p;
+    var slash = body.lastIndexOf('/');
+    var dir = slash >= 0 ? body.slice(0, slash + 1) : '';
+    var base = slash >= 0 ? body.slice(slash + 1) : body;
+    var dot = base.lastIndexOf('.');
+    var stem = dot > 0 ? base.slice(0, dot) : base;
+    var ext = dot > 0 ? base.slice(dot) : '';
+    var c = 2, cand;
+    do {
+      cand = dir + stem + ' ' + c + ext + (isDir ? '/' : '');
+      c++;
+    } while (used[cand]);
+    used[cand] = true;
+    return cand;
+  }
+
+  /* ---------------- zip 재작성: 이름만 NFC+UTF-8 플래그, 데이터 무수정 ---------------- */
+  function rebuildZipJob(job, fflate, onProg) {
+    return new Promise(function (resolve, reject) {
+      var obj = {}, used = {}, i = 0;
+      var total = job.entries.length;
+      var step = function () {
+        try {
+          var end = Math.min(total, i + 25);
+          for (; i < end; i++) {
+            var en = job.entries[i];
+            var nm = uniquePath(en.fixedName, used);
+            var data = en.isDir ? new Uint8Array(0) : extractEntryData(job.u8, en, fflate);
+            // fflate는 파일명을 항상 UTF-8로 쓰고 비ASCII면 bit11(EFS)을 자동 설정
+            obj[nm] = [data, { level: 0, mtime: en.mtime }];
+          }
+          if (onProg) onProg(i, total);
+          if (i < total) {
+            setTimeout(step, 0); // UI 갱신 틈
+          } else {
+            resolve(fflate.zipSync(obj));
+          }
+        } catch (err) {
+          reject(err);
+        }
+      };
+      step();
+    });
+  }
+
+  /* ---------------- 파일/폴더 → zip 생성 ---------------- */
+  function buildFilesZipData(fflate, onProg) {
+    var obj = {}, used = {};
+    var level = compressChk.checked ? 6 : 0;
+    var total = fileItems.length;
+    var chain = Promise.resolve();
+    fileItems.forEach(function (it, idx) {
+      chain = chain.then(function () {
+        return it.file.arrayBuffer().then(function (buf) {
+          var nm = uniquePath(it.fixedPath, used);
+          obj[nm] = [new Uint8Array(buf), { level: level, mtime: new Date(it.file.lastModified || Date.now()) }];
+          if (onProg) onProg(idx + 1, total);
+        });
+      });
+    });
+    return chain.then(function () { return fflate.zipSync(obj); });
+  }
+
+  /* ---------------- 항목 추가 ---------------- */
+  function isZipFile(f) {
+    var lower = (f.name || '').toLowerCase();
+    return lower.slice(-4) === '.zip' ||
+      f.type === 'application/zip' || f.type === 'application/x-zip-compressed';
+  }
+
+  function skipJunk(name) {
+    var base = name.slice(name.lastIndexOf('/') + 1);
+    return base === '.DS_Store' || base === 'Thumbs.db';
+  }
+
+  function pushFileItem(file, path) {
+    if (skipJunk(path)) return;
+    fileItems.push({
+      file: file,
+      origPath: path,
+      fixedPath: fixName(path),
+      broken: isBrokenName(path)
+    });
+  }
+
+  function addZipFileAsync(file) {
+    if (file.size > SIZE_WARN) {
+      setStatus('⚠️ ' + file.name + '이(가) 300MB를 넘어요 — 처리에 시간이 걸리거나 브라우저가 느려질 수 있어요');
+    } else {
+      setStatus(file.name + ' — zip 내부를 분석하는 중…');
+    }
+    return file.arrayBuffer().then(function (buf) {
+      addZipU8(new Uint8Array(buf), file.name);
+    }).catch(function (err) {
+      setStatus(file.name + '을(를) 읽지 못했어요: ' + errMsg(err), true);
+    });
+  }
+
+  function addFilesFromList(list, isFolder) {
+    var zipPromises = [], added = 0, i, f, rel;
+    for (i = 0; i < list.length; i++) {
+      f = list[i];
+      if (!f || !f.name) continue;
+      rel = (isFolder && f.webkitRelativePath) ? f.webkitRelativePath : f.name;
+      if (!isFolder && isZipFile(f)) {
+        zipPromises.push(addZipFileAsync(f));
+        added++;
+      } else {
+        pushFileItem(f, rel);
+        added++;
+      }
+    }
+    if (!added) {
+      setStatus('추가할 파일이 없어요.', true);
+      return;
+    }
+    if (zipPromises.length) {
+      renderAll();
+      Promise.all(zipPromises).then(renderAll);
+    } else {
+      renderAll();
+    }
+  }
+
+  /* ---------------- 진단 표 렌더 ---------------- */
+  function makeBadge(status, text) {
+    var b = document.createElement('span');
+    b.className = 'badge ' + status;
+    b.textContent = text;
+    return b;
+  }
+
+  function nameCell(name, broken) {
+    var td = document.createElement('td');
+    if (broken) {
+      var sp = document.createElement('span');
+      sp.className = 'name-broken';
+      sp.textContent = name;
+      td.appendChild(sp);
+    } else {
+      td.textContent = name;
+    }
+    return td;
+  }
+
+  function fixedCell(orig, fixed) {
+    var td = document.createElement('td');
+    if (orig === fixed) {
+      td.textContent = '변경 없음';
+      td.className = 'name-same';
+    } else {
+      td.textContent = fixed;
+    }
+    return td;
+  }
+
+  function diagRow(origName, fixedName, broken, status, statusText) {
+    var tr = document.createElement('tr');
+    tr.appendChild(nameCell(origName, broken));
+    var arrow = document.createElement('td');
+    arrow.className = 'arrow';
+    arrow.textContent = '→';
+    tr.appendChild(arrow);
+    tr.appendChild(fixedCell(origName, fixedName));
+    var bc = document.createElement('td');
+    bc.className = 'badge-cell';
+    bc.appendChild(makeBadge(status, statusText));
+    tr.appendChild(bc);
+    return tr;
+  }
+
+  function totalBytes() {
+    var sum = 0, i;
+    for (i = 0; i < fileItems.length; i++) sum += fileItems[i].file.size || 0;
+    for (i = 0; i < zipJobs.length; i++) sum += zipJobs[i].u8.length;
+    return sum;
+  }
+
+  function folderMode() {
+    for (var i = 0; i < fileItems.length; i++) {
+      if (fileItems[i].origPath.indexOf('/') >= 0) return true;
+    }
+    return false;
+  }
+
+  function renderAll() {
+    var nFiles = fileItems.length, nZips = zipJobs.length;
+    if (!nFiles && !nZips) {
+      workspace.hidden = true;
+      dropZone.hidden = false;
+      return;
+    }
+    dropZone.hidden = true;
+    workspace.hidden = false;
+    diagBody.innerHTML = '';
+
+    var brokenCount = 0, itemCount = 0, needsAnyFix = false, i, j;
+
+    for (i = 0; i < nFiles; i++) {
+      var it = fileItems[i];
+      itemCount++;
+      if (it.broken) { brokenCount++; needsAnyFix = true; }
+      diagBody.appendChild(diagRow(
+        it.origPath, it.fixedPath, it.broken,
+        it.broken ? 'bad' : 'ok', it.broken ? '자소분리됨' : '정상'));
+    }
+
+    for (i = 0; i < nZips; i++) {
+      var job = zipJobs[i];
+      var head = document.createElement('tr');
+      head.className = 'zip-head';
+      var htd = document.createElement('td');
+      htd.colSpan = 4;
+      htd.textContent = '🗜 ' + job.name;
+      if (!job.parseError) {
+        var enc = document.createElement('span');
+        enc.className = 'enc-badge';
+        enc.textContent = '파일명 인코딩: ' + job.encLabel;
+        htd.appendChild(enc);
+      }
+      head.appendChild(htd);
+      diagBody.appendChild(head);
+
+      if (job.parseError) {
+        var er = document.createElement('tr');
+        er.className = 'zip-error';
+        var etd = document.createElement('td');
+        etd.colSpan = 4;
+        etd.textContent = '이 zip은 처리할 수 없어요 — ' + job.parseError;
+        er.appendChild(etd);
+        diagBody.appendChild(er);
+        continue;
+      }
+      if (job.encrypted) {
+        var er2 = document.createElement('tr');
+        er2.className = 'zip-error';
+        var etd2 = document.createElement('td');
+        etd2.colSpan = 4;
+        etd2.textContent = '🔒 암호 걸린 zip은 처리할 수 없어요 — 압축을 풀어 폴더째 넣어주세요';
+        er2.appendChild(etd2);
+        diagBody.appendChild(er2);
+      }
+      for (j = 0; j < job.entries.length; j++) {
+        var en = job.entries[j];
+        itemCount++;
+        if (en.status !== 'ok') { brokenCount++; needsAnyFix = true; }
+        diagBody.appendChild(diagRow(
+          en.origName, en.fixedName, en.status === 'bad',
+          en.status, en.statusText));
+      }
+      if (job.needsFix && !job.encrypted) needsAnyFix = true;
+    }
+
+    var isFolder = folderMode();
+    var savableZips = 0;
+    for (i = 0; i < nZips; i++) {
+      if (!zipJobs[i].parseError && !zipJobs[i].encrypted) savableZips++;
+    }
+
+    countInfo.textContent = itemCount + '개 항목 · 고칠 이름 ' + brokenCount + '개';
+    noticeEl.hidden = needsAnyFix || itemCount === 0;
+
+    var over = totalBytes() > SIZE_WARN;
+    warnBox.hidden = !over;
+    if (over) warnBox.textContent = '⚠️ 총 용량이 300MB를 넘어요 — 처리에 시간이 걸리거나 브라우저가 느려질 수 있어요';
+
+    saveSingleBtn.hidden = !(nFiles === 1 && !isFolder);
+    saveEachBtn.hidden = !(nFiles >= 2 && !isFolder);
+    saveZipBtn.hidden = !(nFiles >= 2 || isFolder);
+    saveFixedZipBtn.hidden = savableZips === 0;
+    saveFixedZipBtn.textContent = savableZips > 1
+      ? '⬇ 고친 zip 저장 (' + savableZips + '개)'
+      : '⬇ 고친 zip 저장';
+    compressCtrl.hidden = saveZipBtn.hidden;
+    emptyDirHint.hidden = !isFolder;
+
+    if (itemCount && !busy) {
+      setStatus(needsAnyFix
+        ? '진단 완료 — 고칠 이름 ' + brokenCount + '개를 찾았어요. 저장 버튼을 눌러 변환하세요'
+        : '진단 완료 — 모든 이름이 정상(NFC)이에요');
+    }
+  }
+
+  /* ---------------- 저장 ---------------- */
+  function saveBlob(blob, name) {
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 5000);
+  }
+
+  function setBusy(b) {
+    busy = b;
+    saveEachBtn.disabled = b;
+    saveZipBtn.disabled = b;
+    saveFixedZipBtn.disabled = b;
+    saveSingleBtn.disabled = b;
+    resetBtn.disabled = b;
+    addBtn.disabled = b;
+  }
+
+  // 파일 1개: NFC 이름으로 바로 재다운로드 (내용 무수정 — 이름만)
+  saveSingleBtn.addEventListener('click', function () {
+    var it = fileItems[0];
+    if (!it || busy) return;
+    saveBlob(it.file, it.fixedPath);
+    setStatus('저장 완료! ' + it.fixedPath + ' — 다운로드 폴더를 확인하세요');
+  });
+
+  // 파일 여러 개: 각각 순차 다운로드 (파일 단위 실패가 전체를 죽이지 않게)
+  saveEachBtn.addEventListener('click', function () {
+    if (busy || !fileItems.length) return;
+    setBusy(true);
+    batchHint.hidden = false;
+    var idx = 0, saved = 0, failed = 0;
+    var step = function () {
+      if (idx >= fileItems.length) {
+        batchHint.hidden = true;
+        setBusy(false);
+        setStatus(failed
+          ? '저장 완료 ' + saved + '개 · 실패 ' + failed + '개 — 다운로드 폴더를 확인하세요'
+          : '전체 저장 완료! ' + saved + '개를 다운로드했어요 — 다운로드 폴더를 확인하세요', failed > 0);
+        setProgress(fileItems.length, fileItems.length);
+        return;
+      }
+      var it = fileItems[idx];
+      setStatus('[' + (idx + 1) + '/' + fileItems.length + '] ' + it.fixedPath + ' 저장 중…');
+      setProgress(idx, fileItems.length);
+      try {
+        saveBlob(it.file, it.fixedPath);
+        saved++;
+      } catch (err) {
+        failed++;
+      }
+      idx++;
+      setTimeout(step, 300); // 브라우저가 연속 다운로드를 놓치지 않도록 간격을 둠
+    };
+    step();
+  });
+
+  // 파일/폴더 → zip으로 묶어 저장
+  saveZipBtn.addEventListener('click', function () {
+    if (busy || !fileItems.length) return;
+    setBusy(true);
+    setStatus('압축 도구를 불러오는 중…');
+    loadFflate().then(function (fflate) {
+      setStatus('zip을 만드는 중… (' + fileItems.length + '개 항목)');
+      return buildFilesZipData(fflate, function (done, total) {
+        setProgress(done, total);
+        setStatus('zip을 만드는 중… ' + done + '/' + total);
+      });
+    }).then(function (u8) {
+      var name = zipOutName();
+      saveBlob(new Blob([u8], { type: 'application/zip' }), name);
+      setProgress(1, 1);
+      setBusy(false);
+      setStatus('저장 완료! ' + name + ' — 모든 파일명이 NFC로 고쳐졌어요');
+    }).catch(function (err) {
+      setProgress(0, 0);
+      setBusy(false);
+      setStatus(err && err.message === 'offline' ? offlineMsg() : 'zip 생성 중 오류가 났어요: ' + errMsg(err), true);
+    });
+  });
+
+  function zipOutName() {
+    var seg, i, p, s;
+    for (i = 0; i < fileItems.length; i++) {
+      p = fileItems[i].fixedPath;
+      s = p.indexOf('/') >= 0 ? p.slice(0, p.indexOf('/')) : null;
+      if (s === null) { seg = null; break; }
+      if (seg === undefined) seg = s;
+      else if (seg !== s) { seg = null; break; }
+    }
+    return (seg ? seg + '_고침' : '고친파일들') + '.zip';
+  }
+
+  // zip 재작성 저장: 내부 파일명 전부 NFC + UTF-8 플래그, 데이터는 무수정
+  saveFixedZipBtn.addEventListener('click', function () {
+    if (busy) return;
+    var jobs = [];
+    for (var i = 0; i < zipJobs.length; i++) {
+      if (!zipJobs[i].parseError && !zipJobs[i].encrypted) jobs.push(zipJobs[i]);
+    }
+    if (!jobs.length) return;
+    setBusy(true);
+    if (jobs.length > 1) batchHint.hidden = false;
+    setStatus('압축 도구를 불러오는 중…');
+    loadFflate().then(function (fflate) {
+      var idx = 0, saved = 0, failed = 0;
+      var next = function () {
+        if (idx >= jobs.length) {
+          batchHint.hidden = true;
+          setBusy(false);
+          setStatus(failed
+            ? 'zip 저장 완료 ' + saved + '개 · 실패 ' + failed + '개'
+            : '저장 완료! 고친 zip ' + saved + '개를 다운로드했어요 — 그대로 Jira에 첨부하면 돼요', failed > 0);
+          return;
+        }
+        var job = jobs[idx];
+        setStatus('[' + (idx + 1) + '/' + jobs.length + '] ' + job.name + ' 재작성 중…');
+        rebuildZipJob(job, fflate, function (done, total) {
+          setProgress(done, total);
+          setStatus('[' + (idx + 1) + '/' + jobs.length + '] ' + job.name + ' 재작성 중… ' + done + '/' + total);
+        }).then(function (u8) {
+          saveBlob(new Blob([u8], { type: 'application/zip' }), job.fixedZipName);
+          saved++;
+          setProgress(1, 1);
+        }).catch(function (err) {
+          failed++;
+          setStatus(job.name + ' 처리 실패: ' + errMsg(err), true);
+        }).then(function () {
+          idx++;
+          setTimeout(next, 300);
+        });
+      };
+      next();
+    }).catch(function (err) {
+      setBusy(false);
+      setStatus(err && err.message === 'offline' ? offlineMsg() : '오류가 났어요: ' + errMsg(err), true);
+    });
+  });
+
+  resetBtn.addEventListener('click', function () {
+    if (busy) return;
+    fileItems = [];
+    zipJobs = [];
+    setStatus('');
+    setProgress(0, 0);
+    renderAll();
+  });
+
+  /* ---------------- 입력: 클릭/드래그&드롭/붙여넣기 ---------------- */
+  dropZone.addEventListener('click', function () { fileInput.click(); });
+  pickFileBtn.addEventListener('click', function (e) { e.stopPropagation(); fileInput.click(); });
+  pickDirBtn.addEventListener('click', function (e) { e.stopPropagation(); dirInput.click(); });
+  addBtn.addEventListener('click', function () { fileInput.click(); });
+
+  fileInput.addEventListener('change', function () {
+    if (fileInput.files && fileInput.files.length) addFilesFromList(fileInput.files, false);
+    fileInput.value = ''; // 같은 파일 재선택 허용
+  });
+  dirInput.addEventListener('change', function () {
+    if (dirInput.files && dirInput.files.length) addFilesFromList(dirInput.files, true);
+    dirInput.value = '';
+  });
+
+  // 드롭된 항목이 폴더면 재귀 순회 (경로 유지)
+  function traverseEntry(entry, path, out) {
+    return new Promise(function (resolve) {
+      if (entry.isFile) {
+        entry.file(function (f) {
+          out.push({ file: f, path: path + entry.name });
+          resolve();
+        }, function () { resolve(); });
+      } else if (entry.isDirectory) {
+        var reader = entry.createReader();
+        var readAll = function () {
+          reader.readEntries(function (ents) {
+            if (!ents.length) { resolve(); return; }
+            Promise.all(ents.map(function (en) {
+              return traverseEntry(en, path + entry.name + '/', out);
+            })).then(readAll);
+          }, function () { resolve(); });
+        };
+        readAll();
+      } else {
+        resolve();
+      }
+    });
+  }
+
+  function addDropped(dropped) {
+    var zipPromises = [], added = 0, i, d;
+    for (i = 0; i < dropped.length; i++) {
+      d = dropped[i];
+      if (d.path.indexOf('/') < 0 && isZipFile(d.file)) {
+        zipPromises.push(addZipFileAsync(d.file));
+        added++;
+      } else if (!skipJunk(d.path)) {
+        pushFileItem(d.file, d.path);
+        added++;
+      }
+    }
+    if (!added) {
+      setStatus('추가할 파일이 없어요.', true);
+      return;
+    }
+    if (zipPromises.length) {
+      renderAll();
+      Promise.all(zipPromises).then(renderAll);
+    } else {
+      renderAll();
+    }
+  }
+
+  ['dragenter', 'dragover'].forEach(function (ev) {
+    document.addEventListener(ev, function (e) {
+      e.preventDefault();
+      dropZone.classList.add('dragover');
+    });
+  });
+  ['dragleave', 'drop'].forEach(function (ev) {
+    document.addEventListener(ev, function (e) {
+      e.preventDefault();
+      dropZone.classList.remove('dragover');
+    });
+  });
+  document.addEventListener('drop', function (e) {
+    if (busy) return;
+    var items = e.dataTransfer && e.dataTransfer.items;
+    if (items && items.length && items[0].webkitGetAsEntry) {
+      var out = [], ps = [], i, en;
+      for (i = 0; i < items.length; i++) {
+        en = items[i].webkitGetAsEntry && items[i].webkitGetAsEntry();
+        if (en) ps.push(traverseEntry(en, '', out));
+      }
+      Promise.all(ps).then(function () { addDropped(out); });
+    } else {
+      var list = e.dataTransfer && e.dataTransfer.files;
+      if (list && list.length) addFilesFromList(list, false);
+    }
+  });
+
+  document.addEventListener('paste', function (e) {
+    if (busy) return;
+    var items = e.clipboardData && e.clipboardData.items;
+    if (!items) return;
+    var got = [];
+    for (var i = 0; i < items.length; i++) {
+      if (items[i].kind === 'file') {
+        var f = items[i].getAsFile();
+        if (f) got.push(f);
+      }
+    }
+    if (got.length) {
+      e.preventDefault();
+      addFilesFromList(got, false);
+    }
+  });
+
+  /* (자동 테스트용) 상태 훅 — 동작에는 영향 없음 */
+  window.__tool = {
+    analyzeNames: function (names) {
+      return (names || []).map(function (n) {
+        var f = fixName(n);
+        return { name: n, fixed: f, broken: n !== f };
+      });
+    },
+    get items() {
+      var out = [];
+      fileItems.forEach(function (it) {
+        out.push({ name: it.origPath, fixed: it.fixedPath, broken: it.broken, kind: 'file' });
+      });
+      zipJobs.forEach(function (j) {
+        j.entries.forEach(function (en) {
+          out.push({
+            name: en.origName, fixed: en.fixedName,
+            broken: en.status !== 'ok', kind: 'zip', zip: j.name,
+            status: en.statusText, enc: en.enc
+          });
+        });
+      });
+      return out;
+    },
+    addZipBlob: function (blob, name) {
+      return blob.arrayBuffer().then(function (buf) {
+        var job = addZipU8(new Uint8Array(buf), name || 'test.zip');
+        renderAll();
+        if (job.parseError) throw new Error(job.parseError);
+        return job;
+      });
+    },
+    buildZip: function () {
+      return loadFflate().then(function (fflate) {
+        for (var i = 0; i < zipJobs.length; i++) {
+          if (!zipJobs[i].parseError && !zipJobs[i].encrypted) {
+            return rebuildZipJob(zipJobs[i], fflate, null);
+          }
+        }
+        if (fileItems.length) return buildFilesZipData(fflate, null);
+        throw new Error('만들 항목이 없어요');
+      });
+    },
+    fixSingleName: fixName
+  };
+})();
+</script>
+</body>
+</html>

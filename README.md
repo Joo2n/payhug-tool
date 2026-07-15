@@ -11,6 +11,9 @@
 | 여러 파일 배경 제거 (서명·도장 누끼) | https://joo2n.github.io/payhug-tool/v3/ |
 | 단일 파일 배경 제거 (슬라이더 조절) | https://joo2n.github.io/payhug-tool/v2/ |
 | PDF 변환 (PDF→PNG/JPG) | https://joo2n.github.io/payhug-tool/pdf/ |
+| PDF 만들기 (병합·정리) | https://joo2n.github.io/payhug-tool/merge/ |
+| 파일 압축 (목표 용량 지원) | https://joo2n.github.io/payhug-tool/compress/ |
+| 한글 파일명 고치기 (자소분리 해결) | https://joo2n.github.io/payhug-tool/hangul/ |
 | 웹 가이드 | /guide/v3.html, /guide/v2.html, /guide/pdf.html (+PDF 다운로드) |
 
 ## 구조
@@ -20,6 +23,9 @@ index.html        랜딩 (카드 3개 + 사용법 링크)
 v3/index.html     여러 파일 배경 제거 — 다중 파일·PDF 페이지 체크박스·확대축소·영역선택
 v2/index.html     단일 파일 배경 제거 — 한 장씩·슬라이더 조절
 pdf/index.html    PDF 변환 — 페이지 썸네일 선택, PNG/JPG·해상도 옵션
+merge/index.html  PDF 만들기 — 이미지/PDF/docx/xlsx/pptx → 페이지 그리드(드래그 재정렬·회전·복제·삭제·체크) → 병합 PDF
+compress/index.html 파일 압축 — 이미지(목표 MB)/PDF(3프리셋)/Office·zip(내부 미디어만 재압축, 편집성 유지)
+hangul/index.html 한글 파일명 고치기 — NFD→NFC 재저장, 폴더→NFC zip, 기존 zip 재작성(UTF-8 EFS, CP949 폴백)
 guide/            웹 가이드 3종 + 다운로드용 PDF 3종
 assets/           가이드 스크린샷 (긴 변 1600px)
 .check-links.js   상대 링크/이미지 경로 검증 스크립트 (node .check-links.js)
@@ -70,3 +76,7 @@ assets/           가이드 스크린샷 (긴 변 1600px)
   따라가던 울퉁불퉁한 경계를 매끈한 곡선으로 (300dpi 전체 페이지 게이트로 검증)
 - 07-15 원형 스냅: 거의 원형인 마스크는 완전한 원으로 보정 — 도장 결과가 원 피팅
   수작업과 동급. 형태 게이트(원/사각/타원/서명) 4종 통과
+- 07-15 신규 도구 3종 추가: PDF 만들기(merge)·파일 압축(compress)·한글 파일명 고치기(hangul).
+  리서치 에이전트 13개(타 서비스 UX·기술 검증) → 병렬 빌드 → 헤드리스 게이트 3종 전 항목 통과.
+  기존 도구(v2/v3/pdf)에 pdf.js CVE-2024-4367 완화(isEvalSupported:false) 적용.
+  주의: pdf.js 헤드리스 게이트는 --virtual-time-budget과 함께 쓰면 워커가 멈춤 — 실시간 실행+비콘 수집 방식 사용.

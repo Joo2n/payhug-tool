@@ -360,7 +360,7 @@
   function openOne(pdfjsLib, f) {
     setStatus("'" + f.name + "' 여는 중…");
     return f.arrayBuffer().then(function (buf) {
-      return pdfjsLib.getDocument({ data: buf }).promise;
+      return pdfjsLib.getDocument({ data: buf, isEvalSupported: false }).promise;
     }).then(function (doc) {
       var base = f.name.replace(/\.pdf$/i, '');
       var entry = {

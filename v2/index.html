@@ -344,7 +344,7 @@
     setStatus('PDF 도구를 불러오는 중…');
     loadPdfJs().then(function (pdfjsLib) {
       return file.arrayBuffer().then(function (buf) {
-        return pdfjsLib.getDocument({ data: buf }).promise;
+        return pdfjsLib.getDocument({ data: buf, isEvalSupported: false }).promise;
       });
     }).then(function (doc) {
       pdfDoc = doc;
