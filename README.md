@@ -14,7 +14,7 @@
 | PDF 만들기 (병합·정리) | https://joo2n.github.io/payhug-tool/merge/ |
 | 파일 압축 (목표 용량 지원) | https://joo2n.github.io/payhug-tool/compress/ |
 | 한글 파일명 고치기 (자소분리 해결) | https://joo2n.github.io/payhug-tool/hangul/ |
-| 웹 가이드 | /guide/v3.html, /guide/v2.html, /guide/pdf.html (+PDF 다운로드) |
+| 웹 가이드 | /guide/{v3,v2,pdf,merge,compress,hangul}.html (+PDF 다운로드) |
 
 ## 구조
 
@@ -80,3 +80,5 @@ assets/           가이드 스크린샷 (긴 변 1600px)
   리서치 에이전트 13개(타 서비스 UX·기술 검증) → 병렬 빌드 → 헤드리스 게이트 3종 전 항목 통과.
   기존 도구(v2/v3/pdf)에 pdf.js CVE-2024-4367 완화(isEvalSupported:false) 적용.
   주의: pdf.js 헤드리스 게이트는 --virtual-time-budget과 함께 쓰면 워커가 멈춤 — 실시간 실행+비콘 수집 방식 사용.
+- 07-16 merge 드래그 견고화(폴백 모드·임포트 중 재렌더 지연·user-select 차단, 실마우스 입력 테스트 통과),
+  가이드 3종(merge/compress/hangul) 추가, 기능 전수 검증 18항목 통과(별도 QA 에이전트).

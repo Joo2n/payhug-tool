@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>한글 파일명 고치기 가이드</title>
+<style>
+  @page { size: A4; margin: 14mm 14mm 16mm; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { background: #eef0f4; }
+  body { font-family: "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; color: #24292f; font-size: 11.5pt; line-height: 1.65;
+         max-width: 880px; margin: 28px auto 56px; background: #fff; border: 1px solid #e2e5ea; border-radius: 14px;
+         padding: 30px 40px 36px; box-shadow: 0 2px 14px rgba(30, 38, 60, .05); }
+  @media (max-width: 940px) { body { margin: 0 auto 0; border-radius: 0; border-left: none; border-right: none; padding: 24px 20px 32px; } }
+  .webbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;
+            padding-bottom: 16px; border-bottom: 1px solid #e4e7ee; margin-bottom: 22px; }
+  .webbar a { text-decoration: none; font-size: 10.5pt; font-weight: 600; border-radius: 9px; padding: 8px 14px; }
+  .webbar .back { color: #57606a; }
+  .webbar .back:hover { color: #24292f; }
+  .webbar .dl { color: #fff; background: #4f63f0; border: 1px solid #4f63f0; }
+  .webbar .dl:hover { background: #3d51e0; }
+  @media print { html { background: #fff; } body { max-width: none; margin: 0; border: none; border-radius: 0; padding: 0; box-shadow: none; } .webbar { display: none; } }
+  h1 { font-size: 21pt; margin-bottom: 4px; }
+  .sub { color: #57606a; font-size: 10.5pt; margin-bottom: 18px; }
+  .intro { background: #f6f8fa; border-radius: 8px; padding: 14px 16px; margin-bottom: 22px; }
+  .intro b { color: #0969da; }
+  h2 { font-size: 13.5pt; margin: 22px 0 8px; display: flex; align-items: center; gap: 8px; }
+  .num { display: inline-flex; width: 24px; height: 24px; border-radius: 50%; background: #24292f; color: #fff;
+         font-size: 11pt; align-items: center; justify-content: center; flex: none; }
+  .step { break-inside: avoid; margin-bottom: 6px; }
+  .step p { margin-bottom: 8px; }
+  .shot { width: 100%; border: 1px solid #d0d7de; border-radius: 8px; display: block; }
+  .tip { background: #fff8e6; border-left: 3px solid #e8a915; padding: 8px 12px; margin: 10px 0 0; font-size: 10.5pt; border-radius: 0 6px 6px 0; }
+  .pagebreak { break-before: page; }
+  .faq { margin-top: 18px; }
+  .faq h2 { margin-bottom: 10px; }
+  .qa { margin-bottom: 10px; }
+  .qa b { display: block; }
+  .foot { margin-top: 24px; padding-top: 10px; border-top: 1px solid #d0d7de; color: #57606a; font-size: 9.5pt; }
+  code { background: #f6f8fa; border-radius: 4px; padding: 1px 6px; font-size: 10.5pt; font-family: "Apple SD Gothic Neo", sans-serif; }
+</style>
+</head>
+<body>
+
+<div class="webbar">
+  <a class="back" href="../">🏠 홈</a>
+  <a class="back" href="../hangul/">← 도구로 돌아가기</a>
+  <a class="dl" href="guide-hangul.pdf" download="한글 파일명 고치기 가이드.pdf">⬇ PDF로 받기</a>
+</div>
+
+<h1>🔤 한글 파일명 고치기 — 사용 가이드</h1>
+<div class="sub">맥에서 만든 파일의 깨진 한글 이름(자소분리)을 고쳐 주는 도구 · 운영팀용 · 2026.07</div>
+
+<div class="intro">
+  맥에서 만든 파일을 Jira·윈도우로 보내면 한글이 <b>ㅎㅏㄴㄱㅡㄹ</b>처럼 조각조각 깨져 보일 때가 있어요.
+  이 도구에 넣으면 <b>어떤 이름이 깨질지 미리 보여주고, 안 깨지는 이름으로 바꿔서</b> 돌려줍니다.
+  파일 내용은 전혀 건드리지 않고 <b>이름만</b> 고쳐요. <b>설치 없이 크롬에서 바로</b> 쓰면 되고, 파일이 외부로 나가지 않아요.
+</div>
+
+<div class="step">
+  <h2><span class="num">1</span>왜 깨질까요? — 맥은 한글을 "조각"으로 저장해요</h2>
+  <p>같은 <code>한글.txt</code>라도, 맥은 파일 이름을 <b>ㅎ+ㅏ+ㄴ+ㄱ+ㅡ+ㄹ</b>처럼 자음·모음 조각으로 풀어서 저장해요.
+  맥 안에서는 알아서 합쳐 보여주니까 티가 안 나는데, <b>윈도우·Jira는 완성된 글자를 기대</b>하기 때문에
+  조각을 그대로 보여줘서 <code>ㅎㅏㄴㄱㅡㄹ.txt</code>처럼 깨져 보이는 거예요. 이걸 <b>자소분리</b>라고 부릅니다.</p>
+  <p>파일이 고장난 게 아니라 <b>이름 표기 방식만 다른 것</b>이라, 이름을 "완성된 글자" 방식으로 다시 써 주면 끝나요. 이 도구가 그 일을 해 줍니다.</p>
+</div>
+
+<div class="step">
+  <h2><span class="num">2</span>도구를 열고, 파일·폴더·zip을 끌어다 놓으세요</h2>
+  <p>파일 여러 개, 폴더 통째, .zip 모두 <b>알아서 판별</b>해요. 폴더는 [폴더 선택] 버튼으로 고를 수도 있고,
+  복사해 둔 파일은 <b>Cmd+V 붙여넣기</b>로도 넣을 수 있어요. zip을 넣으면 압축을 풀지 않고 <b>내부 파일명까지</b> 들여다봅니다.</p>
+  <img class="shot" src="../assets/hangul-step1.png" alt="초기 화면">
+</div>
+
+<div class="step pagebreak">
+  <h2><span class="num">3</span>진단 표에서 어떤 이름이 깨지는지 확인하세요</h2>
+  <p>넣자마자 이름을 하나씩 검사해서 표로 보여줘요.<br>
+  · <b>빨간 하이라이트 + "자소분리됨"</b> — 윈도우·Jira에서 깨져 보일 이름이에요. 오른쪽에 고친 이름이 미리 보여요.<br>
+  · <b>"정상"</b> — 그대로 보내도 안 깨지는 이름이에요. 전부 정상이면 "이미 정상이에요" 안내가 떠요.<br>
+  · zip은 제목 줄에 <b>파일명 인코딩</b>도 표시해요 — "UTF-8(맥 표준)", "EUC-KR(윈도우 구형)"처럼 어떤 방식으로 저장됐는지 알려줍니다.</p>
+  <img class="shot" src="../assets/hangul-step2.png" alt="진단 표 — 깨질 이름이 빨갛게 표시됨">
+</div>
+
+<div class="step pagebreak">
+  <h2><span class="num">4</span>저장 버튼을 눌러 변환하세요</h2>
+  <p>넣은 것에 따라 버튼이 알맞게 나타나요.<br>
+  · <b>파일 1개</b> → [고친 이름으로 저장] 한 번이면 끝.<br>
+  · <b>파일 여러 개</b> → [각각 저장]으로 낱개로 받거나, [zip으로 묶어 저장]으로 한 번에 받아요.<br>
+  · <b>폴더</b> → 폴더 구조를 그대로 유지한 <b>zip으로</b> 받아져요.<br>
+  · <b>zip</b> → [고친 zip 저장]을 누르면 압축을 풀 필요 없이 <b>내부 파일명만 고친 새 zip</b>이 내려와요. 파일 내용은 그대로예요.</p>
+  <img class="shot" src="../assets/hangul-step3.png" alt="변환 완료 — 고친 zip 다운로드">
+  <div class="tip">[각각 저장]처럼 여러 개를 받을 때 브라우저가 "여러 파일 다운로드 허용"을 물어보면 [허용]을 눌러 주세요. zip으로 묶을 때 [용량 줄이기]를 켜면 파일이 작아지는 대신 조금 느려져요.</div>
+</div>
+
+<div class="step">
+  <h2><span class="num">5</span>Jira에 올릴 땐, 받은 파일을 그대로 첨부하세요</h2>
+  <p>여기서 받은 파일은 이름이 이미 고쳐져 있으니 <b>그대로 Jira에 첨부</b>하면 윈도우 동료에게도 한글이 제대로 보여요.
+  폴더를 넣었다면 zip으로 받아지는데, <b>zip째 첨부</b>하면 됩니다. 원본 파일 말고 <b>꼭 이 도구에서 받은 쪽</b>을 올리는 것만 기억하세요.</p>
+</div>
+
+<div class="faq">
+  <h2>자주 물어볼 것 같은 것</h2>
+  <div class="qa"><b>Q. 암호 걸린 zip도 되나요?</b>
+  안 돼요. 암호 zip은 내부를 다시 쓸 수 없어서 처리할 수 없어요. 압축을 푼 다음 <b>폴더째</b> 넣어 주세요 — 그러면 고친 zip으로 다시 받을 수 있어요.</div>
+  <div class="qa"><b>Q. 폴더를 넣었는데 빈 폴더가 사라졌어요.</b>
+  빈 폴더는 zip에 포함되지 않아요 (화면에도 같은 안내가 떠요). 파일이 든 폴더만 결과 zip에 들어갑니다.</div>
+  <div class="qa"><b>Q. 반디네이머 같은 앱과 뭐가 다른가요?</b>
+  설치 없이 크롬에서 바로 쓰는 것에 더해, <b>폴더 통째·zip 내부 파일명까지</b> 한 번에 처리해요. zip은 압축을 풀지 않고도 내부 이름만 고쳐서 새 zip으로 돌려주고, 어떤 인코딩으로 저장된 zip인지도 알려줍니다.</div>
+  <div class="qa"><b>Q. 인터넷이 필요한가요? 파일이 밖으로 나가나요?</b>
+  모든 처리는 브라우저 안에서만 이뤄지고 파일은 밖으로 나가지 않아요. 다만 zip을 만들거나 다시 쓸 때 압축 도구(외부 라이브러리)를 불러오는 데만 인터넷이 필요해요.</div>
+  <div class="qa"><b>Q. 파일 내용도 바뀌나요?</b>
+  아니요. <b>이름만</b> 바뀌고 내용물은 1바이트도 건드리지 않아요. 이름이 겹치면 <code>이름 2</code>처럼 번호를 붙여 구분해 줍니다.</div>
+</div>
+
+<div class="foot">문의: 이서준 · 다른 도구는 각각 <a href="v2.html">"단일 파일 배경 제거 가이드"</a>, <a href="v3.html">"여러 파일 배경 제거 가이드"</a>, <a href="pdf.html">"PDF변환 가이드"</a> 참고</div>
+
+</body>
+</html>

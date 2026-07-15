@@ -91,6 +91,9 @@
     gap: 12px;
   }
   .pcard {
+    user-select: none;
+    -webkit-user-select: none;
+    cursor: grab;
     background: #fff;
     border: 2px solid #e4e7ee;
     border-radius: 12px;
@@ -772,7 +775,11 @@
   }
 
   /* ---------------- 카드 그리드 ---------------- */
+  var draggingNow = false;   // 드래그 중 재렌더 금지 (임포트 진행이 드래그를 끊는 문제)
+  var pendingRender = false;
+
   function renderGrid() {
+    if (draggingNow) { pendingRender = true; return; }
     grid.innerHTML = '';
     pages.forEach(function (pg) { grid.appendChild(buildCard(pg)); });
     var add = document.createElement('div');
@@ -948,10 +955,18 @@
         ghostClass: 'ghost',
         draggable: '.pcard',
         filter: '.add-card',
+        // 네이티브 HTML5 DnD 대신 폴백(마우스/터치 합성) — 트랙패드·터치에서 일관 동작
+        forceFallback: true,
+        fallbackOnBody: true,
+        fallbackTolerance: 3,
+        touchStartThreshold: 4,
+        onStart: function () { draggingNow = true; },
         onEnd: function () {
+          draggingNow = false;
           var addCard = grid.querySelector('.add-card');
           if (addCard) grid.appendChild(addCard); // ⊕ 카드는 항상 맨 끝
           syncOrderFromDom();
+          if (pendingRender) { pendingRender = false; renderGrid(); }
         }
       });
     }).catch(function () {

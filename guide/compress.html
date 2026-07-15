@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>파일 압축 가이드</title>
+<style>
+  @page { size: A4; margin: 14mm 14mm 16mm; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { background: #eef0f4; }
+  body { font-family: "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; color: #24292f; font-size: 11.5pt; line-height: 1.65;
+         max-width: 880px; margin: 28px auto 56px; background: #fff; border: 1px solid #e2e5ea; border-radius: 14px;
+         padding: 30px 40px 36px; box-shadow: 0 2px 14px rgba(30, 38, 60, .05); }
+  @media (max-width: 940px) { body { margin: 0 auto 0; border-radius: 0; border-left: none; border-right: none; padding: 24px 20px 32px; } }
+  .webbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;
+            padding-bottom: 16px; border-bottom: 1px solid #e4e7ee; margin-bottom: 22px; }
+  .webbar a { text-decoration: none; font-size: 10.5pt; font-weight: 600; border-radius: 9px; padding: 8px 14px; }
+  .webbar .back { color: #57606a; }
+  .webbar .back:hover { color: #24292f; }
+  .webbar .dl { color: #fff; background: #4f63f0; border: 1px solid #4f63f0; }
+  .webbar .dl:hover { background: #3d51e0; }
+  @media print { html { background: #fff; } body { max-width: none; margin: 0; border: none; border-radius: 0; padding: 0; box-shadow: none; } .webbar { display: none; } }
+  h1 { font-size: 21pt; margin-bottom: 4px; }
+  .sub { color: #57606a; font-size: 10.5pt; margin-bottom: 18px; }
+  .intro { background: #f6f8fa; border-radius: 8px; padding: 14px 16px; margin-bottom: 22px; }
+  .intro b { color: #0969da; }
+  h2 { font-size: 13.5pt; margin: 22px 0 8px; display: flex; align-items: center; gap: 8px; }
+  .num { display: inline-flex; width: 24px; height: 24px; border-radius: 50%; background: #24292f; color: #fff;
+         font-size: 11pt; align-items: center; justify-content: center; flex: none; }
+  .step { break-inside: avoid; margin-bottom: 6px; }
+  .step p { margin-bottom: 8px; }
+  .shot { width: 100%; border: 1px solid #d0d7de; border-radius: 8px; display: block; }
+  .tip { background: #fff8e6; border-left: 3px solid #e8a915; padding: 8px 12px; margin: 10px 0 0; font-size: 10.5pt; border-radius: 0 6px 6px 0; }
+  .pagebreak { break-before: page; }
+  .faq { margin-top: 18px; }
+  .faq h2 { margin-bottom: 10px; }
+  .qa { margin-bottom: 10px; }
+  .qa b { display: block; }
+  .foot { margin-top: 24px; padding-top: 10px; border-top: 1px solid #d0d7de; color: #57606a; font-size: 9.5pt; }
+  code { background: #f6f8fa; border-radius: 4px; padding: 1px 6px; font-size: 10.5pt; font-family: "Apple SD Gothic Neo", sans-serif; }
+</style>
+</head>
+<body>
+
+<div class="webbar">
+  <a class="back" href="../">🏠 홈</a>
+  <a class="back" href="../compress/">← 도구로 돌아가기</a>
+  <a class="dl" href="guide-compress.pdf" download="파일 압축 가이드.pdf">⬇ PDF로 받기</a>
+</div>
+
+<h1>🗜 파일 압축 — 사용 가이드</h1>
+<div class="sub">이미지·PDF·PPT·Word·Excel 용량을 줄여 메일 첨부 제한에 맞추는 도구 · 운영팀용 · 2026.07</div>
+
+<div class="intro">
+  "메일이 10MB 제한이라 안 보내져요" 할 때 쓰는 도구예요. 파일을 넣으면 <b>바로 자동으로 압축</b>이
+  시작되고, 얼마나 줄었는지 보여 줘요. <b>설치 없이 크롬에서 바로</b> 쓰면 되고, 파일이 외부로
+  나가지 않아요 (압축 라이브러리를 불러올 때만 인터넷이 필요합니다).
+</div>
+
+<div class="step">
+  <h2><span class="num">1</span>도구를 열고, 파일을 끌어다 놓으세요</h2>
+  <p>이미지(JPG·PNG·WEBP), PDF, 오피스 문서(PPTX·DOCX·XLSX), ZIP까지 넣을 수 있어요. <b>여러 개를
+  한꺼번에</b> 끌어다 놔도 되고, 복사한 이미지는 Cmd+V로 붙여넣어도 됩니다. 넣자마자
+  <b>권장 설정으로 자동 압축</b>이 시작돼요. 파일을 더 넣으려면 [＋ 파일 추가]를 누르세요.</p>
+  <img class="shot" src="../assets/compress-step1.png" alt="초기 화면">
+  <div class="tip">300MB가 넘는 파일은 브라우저 메모리 한계로 실패할 수 있어요. 그 정도로 크면 파일을 나누는 게 안전합니다.</div>
+</div>
+
+<div class="step pagebreak">
+  <h2><span class="num">2</span>압축 정도를 고르세요 — 보통은 [권장] 그대로</h2>
+  <p>위쪽 <b>압축 정도</b> 버튼 세 개 중 하나를 고르면 전체 파일이 자동으로 다시 압축돼요.<br>
+  · <b>약함</b>(고품질) — 화질 우선. 대신 <b>감소 폭은 작아요</b>.<br>
+  · <b>권장</b>(균형, 기본) — 대부분 이거면 충분합니다.<br>
+  · <b>강함</b>(최대 압축) — 화질을 양보하고 용량을 최대한 줄여요.</p>
+  <p><b>PDF는 하나만 기억하세요.</b> 권장·강함으로 압축한 PDF는 용량이 크게 줄지만, <b>텍스트 선택(드래그·복사)이
+  안 되는 이미지 PDF</b>로 다시 만들어져요. 텍스트를 살려야 하는 PDF는 [약함]을 쓰세요 — 내용은 그대로 두고
+  구조만 정리해서, 대신 감소 폭이 작습니다. 어느 쪽인지는 목록 위 안내 문구에도 항상 떠 있어요.</p>
+  <img class="shot" src="../assets/compress-step2.png" alt="권장 설정으로 압축된 파일 목록">
+</div>
+
+<div class="step pagebreak">
+  <h2><span class="num">3</span>딱 몇 MB 이하로 맞춰야 하면 — [고급] 목표 용량</h2>
+  <p>"메일 첨부가 10MB까지"처럼 <b>맞춰야 하는 숫자가 정해져 있을 때</b>는 [고급]에 체크하고 <b>목표 용량</b>에
+  숫자를 넣으세요 (예: <code>10</code>). 그러면 압축 정도 대신 <b>각 파일을 그 용량 이하로</b> 맞춰 줘요.
+  파일이 여러 개면 파일마다 각각 적용됩니다.</p>
+  <img class="shot" src="../assets/compress-step3.png" alt="목표 용량 입력">
+  <div class="tip">최소 설정으로도 목표를 못 맞추면 파일에 <b>"목표 미달"</b>이 표시돼요. 그때는 가장 작게 줄인 결과가 담겨 있으니, 파일을 나누거나 목표 숫자를 올려서 다시 해 보세요.</div>
+</div>
+
+<div class="step pagebreak">
+  <h2><span class="num">4</span>결과를 확인하고 저장하세요</h2>
+  <p>파일마다 <b>원래 용량 → 줄어든 용량</b>과 절감률(예: −84%)이 표시돼요. 개별 [⬇ 저장]을 누르거나,
+  아래 <b>[⬇ 전체 저장]</b>으로 한 번에 받으세요. 저장 파일명은 <b>원본명_압축.확장자</b>입니다.</p>
+  <p>알아 두면 좋은 세 가지 —<br>
+  · <b>"원본 유지"</b>가 뜨면 이미 충분히 최적화된 파일이라 더 줄일 게 없다는 뜻이에요. 원본 그대로 저장됩니다.<br>
+  · <b>투명 배경이 없는 PNG</b>는 용량이 훨씬 작은 JPG로 바꿔서 줄여요. 파일 줄에 <b>[PNG→JPG] 체크박스</b>가
+  생기는데, PNG를 꼭 유지해야 하면 체크를 끄세요 (투명 PNG는 애초에 투명을 그대로 지켜요).<br>
+  · <b>PPT·Word·Excel은 안에 든 이미지만</b> 줄이고 문서 형식은 건드리지 않아요. 압축한 뒤에도 똑같이 열어서 편집할 수 있습니다.</p>
+  <div class="tip">여러 파일을 전체 저장할 때 브라우저가 "여러 파일 다운로드 허용"을 물어보면 [허용]을 눌러 주세요.</div>
+</div>
+
+<div class="faq">
+  <h2>자주 물어볼 것 같은 것</h2>
+  <div class="qa"><b>Q. 인터넷이 필요한가요?</b>
+  압축 라이브러리를 불러올 때만 필요해요. 파일 자체는 브라우저 안에서만 처리되고 밖으로 안 나갑니다.</div>
+  <div class="qa"><b>Q. PDF를 압축했더니 글자가 드래그가 안 돼요.</b>
+  권장·강함은 페이지를 이미지로 다시 만들어서 그래요 (그래서 많이 줄어요). 텍스트를 살려야 하면 [약함]으로 다시 압축하세요 — 대신 용량은 조금만 줄어요.</div>
+  <div class="qa"><b>Q. PPT를 압축하면 깨지지 않나요?</b>
+  안에 든 사진만 줄이고 문서 구조는 그대로라, 압축 후에도 정상적으로 열리고 편집돼요. Word·Excel·ZIP도 같아요.</div>
+  <div class="qa"><b>Q. 암호가 걸린 PDF·ZIP도 되나요?</b>
+  안 돼요. 암호를 푼 파일로 다시 시도해 주세요.</div>
+</div>
+
+<div class="foot">문의: 이서준 · 배경 제거·PDF 변환 도구는 각각 <a href="v2.html">"단일 파일 배경 제거 가이드"</a>, <a href="v3.html">"여러 파일 배경 제거 가이드"</a>, <a href="pdf.html">"PDF변환 가이드"</a> 참고</div>
+
+</body>
+</html>
