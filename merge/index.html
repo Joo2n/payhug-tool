@@ -104,7 +104,7 @@
   }
   .pcard:hover { box-shadow: 0 3px 12px rgba(35, 38, 43, .12); }
   .pcard.ghost { opacity: .35; }
-  .pcard.unchecked { opacity: .55; }
+  .pcard.unchecked { opacity: .55; cursor: pointer; }
   .plabel {
     color: #fff;
     font-size: 11px;
@@ -154,9 +154,9 @@
     left: 0; right: 0; bottom: 0;
     display: flex;
     justify-content: center;
-    gap: 4px;
-    padding: 5px 4px;
-    background: rgba(35, 38, 43, .72);
+    gap: 6px;
+    padding: 6px 4px;
+    background: rgba(35, 38, 43, .8);
     opacity: 0;
     transition: opacity .12s;
     z-index: 2;
@@ -166,11 +166,17 @@
     border: none;
     background: transparent;
     color: #fff;
-    font-size: 14px;
-    padding: 2px 7px;
-    border-radius: 6px;
+    font-size: 18px;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    line-height: 1;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
-  .ptools button:hover:not(:disabled) { background: rgba(255, 255, 255, .22); }
+  .ptools button:hover:not(:disabled) { background: rgba(255, 255, 255, .3); }
   .pnum {
     text-align: center;
     font-size: 12.5px;
@@ -200,6 +206,42 @@
   }
   .add-card:hover { border-color: #7c8cf8; background: #eef1ff; }
   .add-card .plus { font-size: 30px; line-height: 1; }
+
+  /* ---- 변환 중 스켈레톤 카드 ---- */
+  .skel-card {
+    border: 2px dashed #d4d9e3;
+    border-radius: 12px;
+    min-height: 208px;
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 12px;
+    cursor: default;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .skel-card .sname {
+    font-size: 12px;
+    font-weight: 600;
+    color: #6b7280;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .skel-card .sstate { font-size: 12px; color: #8a919e; }
+  .spinner {
+    width: 26px;
+    height: 26px;
+    border: 3px solid #e4e7ee;
+    border-top-color: #4f63f0;
+    border-radius: 50%;
+    animation: spin .8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
 
   /* ---- 확대 모달 ---- */
   #modal {
@@ -316,6 +358,8 @@
                   natW, natH(image/office: 픽셀 크기), baseThumb(canvas) } */
   var files = [];
   var pages = [];
+  var pendingImports = [];   // 변환 대기·진행 중 파일 — 그리드에 스켈레톤 카드로 표시
+  var skelUid = 0;
   var uid = 0;
   var seqCounter = 0;
   var sortMode = 'added';    // 'added' | 'name'
@@ -484,10 +528,24 @@
     });
   }
 
+  function kindLabel(kind) {
+    if (kind === 'pdf') return 'PDF 여는 중…';
+    if (kind === 'image') return '이미지 불러오는 중…';
+    if (kind === 'docx') return 'Word 변환 중…';
+    if (kind === 'xlsx') return 'Excel 변환 중…';
+    if (kind === 'pptx') return 'PPT 변환 중…';
+    return '변환 중…';
+  }
+
   function queueImport(file, kind) {
     importBusy++;
     updateSaveBtn();
     ensureSortable();
+    // 즉시 피드백: 변환 시작 전에 스켈레톤 카드부터 그린다
+    var im = { id: ++skelUid, name: file.name || '파일', label: kindLabel(kind) };
+    pendingImports.push(im);
+    renderGrid();
+    setStatus('"' + im.name + '" ' + im.label);
     importChain = importChain.then(function () {
       var job;
       if (kind === 'pdf') job = importPdf(file);
@@ -504,7 +562,10 @@
       });
     }).then(function () {
       importBusy--;
+      var k = pendingImports.indexOf(im);
+      if (k >= 0) pendingImports.splice(k, 1);
       updateSaveBtn();
+      renderGrid();
     });
   }
 
@@ -777,21 +838,42 @@
   /* ---------------- 카드 그리드 ---------------- */
   var draggingNow = false;   // 드래그 중 재렌더 금지 (임포트 진행이 드래그를 끊는 문제)
   var pendingRender = false;
+  var justDragged = false;   // 드래그 종료 직후 따라오는 click이 선택을 뒤집지 않게
 
   function renderGrid() {
     if (draggingNow) { pendingRender = true; return; }
     grid.innerHTML = '';
     pages.forEach(function (pg) { grid.appendChild(buildCard(pg)); });
+    pendingImports.forEach(function (im) { grid.appendChild(buildSkeleton(im)); });
     var add = document.createElement('div');
     add.className = 'add-card';
     add.innerHTML = '<span class="plus">⊕</span><span>파일 추가</span>';
     add.addEventListener('click', function () { fileInput.click(); });
     grid.appendChild(add);
-    if (pages.length) {
+    if (pages.length || pendingImports.length) {
       dropZone.hidden = true;
       workspace.hidden = false;
     }
     renumber();
+  }
+
+  /* 변환 중 파일의 스켈레톤 카드 (조작 불가, 완료되면 실제 페이지 카드로 교체) */
+  function buildSkeleton(im) {
+    var card = document.createElement('div');
+    card.className = 'skel-card';
+    var sp = document.createElement('div');
+    sp.className = 'spinner';
+    var nm = document.createElement('div');
+    nm.className = 'sname';
+    nm.textContent = im.name;
+    nm.title = im.name;
+    var st = document.createElement('div');
+    st.className = 'sstate';
+    st.textContent = im.label;
+    card.appendChild(sp);
+    card.appendChild(nm);
+    card.appendChild(st);
+    return card;
   }
 
   function buildCard(pg) {
@@ -850,6 +932,17 @@
     var num = document.createElement('div');
     num.className = 'pnum';
     card.appendChild(num);
+
+    // 카드 아무 곳이나 클릭하면 선택 토글 — 체크박스·도구 버튼 클릭과 드래그 직후 클릭은 제외
+    card.addEventListener('click', function (ev) {
+      if (justDragged) return;
+      if (ev.target === cb) return;
+      if (ev.target.closest && ev.target.closest('.ptools')) return;
+      pg.checked = !pg.checked;
+      cb.checked = pg.checked;
+      card.classList.toggle('unchecked', !pg.checked);
+      renumber();
+    });
     return card;
   }
 
@@ -936,7 +1029,7 @@
     var idx = pages.indexOf(pg);
     if (idx < 0) return;
     pages.splice(idx, 1);
-    if (!pages.length) {
+    if (!pages.length && !pendingImports.length) {
       workspace.hidden = true;
       dropZone.hidden = false;
       setStatus('');
@@ -954,7 +1047,14 @@
         animation: 150,
         ghostClass: 'ghost',
         draggable: '.pcard',
-        filter: '.add-card',
+        // 체크(선택)된 카드만 드래그 시작 — 해제 카드·스켈레톤·⊕카드는 필터
+        filter: function (evt, item) {
+          var card = item && item.closest ? item.closest('.pcard') : null;
+          if (!card) return true; // .add-card / .skel-card 등
+          var pg = pageById(+card.dataset.id);
+          return !pg || !pg.checked;
+        },
+        preventOnFilter: false, // 필터돼도 click(=선택 토글)은 살린다
         // 네이티브 HTML5 DnD 대신 폴백(마우스/터치 합성) — 트랙패드·터치에서 일관 동작
         forceFallback: true,
         fallbackOnBody: true,
@@ -963,8 +1063,14 @@
         onStart: function () { draggingNow = true; },
         onEnd: function () {
           draggingNow = false;
+          justDragged = true; // 드래그 뒤 따라오는 click 1회 무시
+          setTimeout(function () { justDragged = false; }, 0);
+          // 스켈레톤·⊕ 카드는 항상 맨 끝
+          Array.prototype.forEach.call(grid.querySelectorAll('.skel-card'), function (s) {
+            grid.appendChild(s);
+          });
           var addCard = grid.querySelector('.add-card');
-          if (addCard) grid.appendChild(addCard); // ⊕ 카드는 항상 맨 끝
+          if (addCard) grid.appendChild(addCard);
           syncOrderFromDom();
           if (pendingRender) { pendingRender = false; renderGrid(); }
         }

@@ -66,6 +66,8 @@
   .seg button + button { border-left: 1px solid #d4d9e3 !important; }
   .seg button.active { background: #4f63f0 !important; color: #fff; }
   .seg button.active .seg-sub { color: #d7ddff; }
+  .seg.locked { opacity: .45; }
+  #presetLock { font-weight: 400; color: #8a919e; font-size: 12px; }
 
   button {
     font: inherit;
@@ -213,6 +215,7 @@
           <button type="button" data-p="mid"  class="active" title="대부분 이 설정이면 충분해요">권장<span class="seg-sub">균형</span></button>
           <button type="button" data-p="high" title="화질을 양보하고 용량을 최대한 줄여요">강함<span class="seg-sub">최대 압축</span></button>
         </div>
+        <span id="presetLock" hidden>목표 용량 사용 중 — 프리셋은 적용되지 않아요</span>
       </div>
       <div class="ctrl">
         <input type="checkbox" id="advChk">
@@ -251,7 +254,7 @@
   var $ = function (id) { return document.getElementById(id); };
 
   var fileInput = $('fileInput'), dropZone = $('drop'), workspace = $('workspace'),
-      presetSeg = $('presetSeg'), advChk = $('advChk'),
+      presetSeg = $('presetSeg'), presetLock = $('presetLock'), advChk = $('advChk'),
       targetWrap = $('targetWrap'), targetInput = $('targetInput'),
       openBtn = $('openBtn'), fileListEl = $('fileList'),
       summaryBar = $('summaryBar'), summaryText = $('summaryText'),
@@ -633,6 +636,7 @@
           if (e !== 'jpg' && e !== 'jpeg' && e !== 'png') return false;
           return prefix ? n.indexOf(prefix) === 0 : true;
         });
+        item.noReducibleImages = names.length === 0; // 원본 유지 시 안내 문구 구분용
         return reencodeMediaEntries(unz, names, P, item).then(function () {
           var out = {};
           Object.keys(unz).forEach(function (n) {
@@ -681,13 +685,17 @@
       item.resultSize = item.origSize;
       item.outExt = item.ext;
       item.status = '원본 유지';
-      item.note = '이미 최적화된 파일이에요';
+      item.note = (item.kind === 'zip' && item.noReducibleImages)
+        ? '줄일 수 있는 이미지가 없어요 (벡터·비디오 등)'
+        : '이미 최적화된 파일이에요';
     }
   }
 
   function processItem(item) {
     item.status = '처리 중';
     item.note = '';
+    item.stale = false;
+    item.noReducibleImages = false;
     renderList();
     var cfg = { preset: preset, targetMB: activeTargetMB() };
     var p;
@@ -702,6 +710,17 @@
       item.resultBlob = null;
       item.resultSize = 0;
     }).then(function () {
+      if (item.stale) {
+        // 처리 도중 설정이 바뀜(성공·실패 무관) → 결과 버리고 재대기, 큐가 다시 집어감
+        item.stale = false;
+        item.status = '대기';
+        item.note = '';
+        item.resultBlob = null;
+        item.resultSize = 0;
+        renderList();
+        updateSummary();
+        return; // _done은 최종(재처리) 완료 시점에 호출
+      }
       renderList();
       updateSummary();
       if (item._done) { item._done(item); item._done = null; }
@@ -758,6 +777,8 @@
       hasAlpha: undefined,
       alphaKnown: false,
       toJpg: undefined,
+      stale: false,
+      noReducibleImages: false,
       _done: null
     };
     if (kind && fileLike.size > BIG_WARN) {
@@ -800,13 +821,18 @@
     updatePdfHint();
     var any = false;
     items.forEach(function (it) {
-      if (it.kind && it.status !== '처리 중') {
-        it.status = '대기';
-        it.note = '';
-        it.resultBlob = null;
-        it.resultSize = 0;
+      if (!it.kind) return;
+      if (it.status === '처리 중') {
+        // 진행 중 항목은 완료 직후 processItem이 '대기'로 되돌려 새 설정으로 재처리
+        it.stale = true;
         any = true;
+        return;
       }
+      it.status = '대기';
+      it.note = '';
+      it.resultBlob = null;
+      it.resultSize = 0;
+      any = true;
     });
     if (any) {
       renderList();
@@ -841,12 +867,18 @@
   });
 
   targetInput.addEventListener('input', function () {
+    updatePdfHint(); // 프리셋 잠금·안내는 즉시 반영
     clearTimeout(targetDebounce);
     targetDebounce = setTimeout(markStaleAndRun, 700);
   });
 
   function updatePdfHint() {
     var t = activeTargetMB();
+    // 목표 용량 모드에서는 프리셋이 적용되지 않으므로 세그먼트를 잠그고 안내
+    var btns = presetSeg.querySelectorAll('button');
+    for (var i = 0; i < btns.length; i++) btns[i].disabled = !!t;
+    presetSeg.classList.toggle('locked', !!t);
+    presetLock.hidden = !t;
     if (t) {
       pdfHint.textContent = '🎯 목표 용량 모드: 프리셋 대신 각 파일을 ' + t + 'MB 이하로 맞춰요 — 최소 설정으로도 안 되면 "목표 미달"로 표시돼요';
       return;
@@ -1049,12 +1081,12 @@
     },
     compressAll: function () {
       items.forEach(function (it) {
-        if (it.kind && it.status !== '처리 중') {
-          it.status = '대기';
-          it.note = '';
-          it.resultBlob = null;
-          it.resultSize = 0;
-        }
+        if (!it.kind) return;
+        if (it.status === '처리 중') { it.stale = true; return; }
+        it.status = '대기';
+        it.note = '';
+        it.resultBlob = null;
+        it.resultSize = 0;
       });
       renderList();
       updateSummary();
