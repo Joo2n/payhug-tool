@@ -485,15 +485,27 @@
 
       // 투명 PNG(또는 사용자가 변환 해제): UPNG 양자화
       return loadUpng().then(function () {
-        var canvas = drawScaled(img, P.imgMax);
-        if (!t) return { blob: quantizeCanvas(canvas, P.pngColors), ext: 'png' };
-        var ladder = [256, 128, 64, 32, 16], best = null, i, b;
-        for (i = 0; i < ladder.length; i++) {
-          b = quantizeCanvas(canvas, ladder[i]);
+        if (!t) return { blob: quantizeCanvas(drawScaled(img, P.imgMax), P.pngColors), ext: 'png' };
+        // 목표 용량 모드: 프리셋과 무관한 고정 사다리(해상도 × 색 수).
+        // 각 해상도에서 최소 색(16)으로 목표 달성 가능한지 먼저 확인하고,
+        // 가능하면 가장 높은 색 수부터 내려가며 목표를 만족하는 최고 품질을 채택.
+        var sides = [4096, 2560, 1600, 1200, 900, 640];
+        var colorsLadder = [256, 128, 64, 32, 16];
+        var best = null, s, i, canvas, b, prevW = 0;
+        for (s = 0; s < sides.length; s++) {
+          canvas = drawScaled(img, sides[s]);
+          if (canvas.width === prevW) continue; // 원본이 이미 이 단계보다 작음 — 동일 결과 재인코딩 방지
+          prevW = canvas.width;
+          b = quantizeCanvas(canvas, 16);
           if (!best || b.size < best.size) best = b;
-          if (b.size <= tb) { best = b; break; }
+          if (b.size > tb) continue; // 이 해상도로는 불가 → 더 축소
+          for (i = 0; i < colorsLadder.length; i++) {
+            b = quantizeCanvas(canvas, colorsLadder[i]);
+            if (b.size <= tb) return { blob: b, ext: 'png', miss: false };
+          }
+          return { blob: b, ext: 'png', miss: b.size > tb }; // 안전망(16색은 위에서 달성)
         }
-        return { blob: best, ext: 'png', miss: best.size > tb };
+        return { blob: best, ext: 'png', miss: true };
       });
     });
   }
